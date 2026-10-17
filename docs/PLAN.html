@@ -79,6 +79,30 @@ svg #ah path{fill:var(--muted)}
   <p><b>How it relates to the Agent Assurance Layer:</b> the Assurance Layer is the <i>spec</i> (what must be true about an agent). This framework is the <i>implementation</i> (the engine that checks it).</p>
 </div>
 
+<div class="card" style="border-color:var(--done);border-width:2px" id="simple">
+  <h3>Keep it simple: version 1</h3>
+  <p>This page is a <b>map of everything</b>. Version 1 is a small slice of it, built to answer one question: <b>does a team find real problems in its own data that it didn't know about?</b> (Decision D13.)</p>
+  <div class="tbl"><table>
+  <tr><th>Part</th><th>In version 1</th><th>Waits</th></tr>
+  <tr><td>Input</td><td><b>Pull</b> from where traces already are: Phoenix (open stack), App Insights (FNOL)</td><td>Tap, LangSmith, Langfuse</td></tr>
+  <tr><td>Checks</td><td><b>5 domain patterns, the 6 built cost rules, Presidio, one judge check</b> (Azure groundedness on Groq)</td><td>Other SDKs, the other 30 cost rules</td></tr>
+  <tr><td>Where they run</td><td><b>After the fact only, in shadow mode</b></td><td>Inline blocking (FNOL already has it in the harness), streaming</td></tr>
+  <tr><td>Output</td><td><b>Scores back into the same tool, plus one weekly report</b></td><td>Dashboard templates, alerts, review queues, datasets</td></tr>
+  <tr><td>Ports used</td><td><b>4 of 9:</b> TraceSource, Evaluator, Judge, ResultSink</td><td>InlineHook, Policy, StateStore, RuleRunner, AlertSink</td></tr>
+  <tr><td>Stacks</td><td>Open stack and Azure</td><td>AWS, GCP</td></tr>
+  </table></div>
+  <p><b>Six rules:</b></p>
+  <ol>
+    <li>One user, one job first.</li>
+    <li>Deterministic first: plain-code checks before judge models.</li>
+    <li>Users learn three things: the rule, where it runs, what happens.</li>
+    <li>One adapter per role per stack.</li>
+    <li>Every addition is asked for by a real team, or replaces something.</li>
+    <li>A measured complexity budget: one install command, the team's YAML on one screen, first report within an hour.</li>
+  </ol>
+  <p><b>After version 1:</b> version 2 adds inline blocking and alerts; version 3 adds existing tools (LangSmith, Langfuse, Prometheus) and the rest of the loop; version 4 adds conversation and the standards work.</p>
+</div>
+
 <nav class="toc">
   <a href="#tiers">Tiers and todos</a>
   <a href="#help">Where you can help</a>
@@ -105,18 +129,18 @@ svg #ah path{fill:var(--muted)}
 </nav>
 
 <div class="strip" id="tiers">
-  <a href="#t0"><span class="pill done">Done</span><b>Tier 0</b>Spike: one shape, four providers</a>
-  <a href="#t1"><span class="pill next">Next</span><b>Tier 1</b>Verified landscape + core package</a>
-  <a href="#t2"><span class="pill next">Planned</span><b>Tier 2</b>Sessions + domain patterns</a>
-  <a href="#t3"><span class="pill next">Planned</span><b>Tier 3</b>Positions + the decide step</a>
-  <a href="#t4"><span class="pill next">Planned</span><b>Tier 4</b>OpenTelemetry in and out</a>
-  <a href="#t5"><span class="pill next">Planned</span><b>Tier 5</b>Cost pack (36 rules)</a>
-  <a href="#t6"><span class="pill next">Planned</span><b>Tier 6</b>Security pack</a>
-  <a href="#t7"><span class="pill later">Later</span><b>Tier 7</b>Host adapters</a>
-  <a href="#t8"><span class="pill later">Later</span><b>Tier 8</b>Fit into existing tools</a>
-  <a href="#t9"><span class="pill later">Later</span><b>Tier 9</b>Semantic layer + conversation</a>
-  <a href="#t10"><span class="pill later">Later</span><b>Tier 10</b>Proof on someone else's agent</a>
-  <a href="#t11"><span class="pill later">Later</span><b>Tier 11</b>Publish</a>
+  <a href="#t0"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 0</b>Spike: one shape, four providers</a>
+  <a href="#t1"><span class="pill next">Next</span> <span class="pill me">v1</span><b>Tier 1</b>Verified landscape + core package</a>
+  <a href="#t2"><span class="pill next">Planned</span> <span class="pill me">v1</span><b>Tier 2</b>Sessions + domain patterns</a>
+  <a href="#t3"><span class="pill next">Planned</span> <span class="pill me">v2</span><b>Tier 3</b>Positions + the decide step</a>
+  <a href="#t4"><span class="pill next">Planned</span> <span class="pill me">v1 (pull only)</span><b>Tier 4</b>OpenTelemetry in and out</a>
+  <a href="#t5"><span class="pill next">Planned</span> <span class="pill me">v1 (6 built rules)</span><b>Tier 5</b>Cost pack (36 rules)</a>
+  <a href="#t6"><span class="pill next">Planned</span> <span class="pill me">v1 (Presidio only)</span><b>Tier 6</b>Security pack</a>
+  <a href="#t7"><span class="pill later">Later</span> <span class="pill me">v2</span><b>Tier 7</b>Host adapters</a>
+  <a href="#t8"><span class="pill later">Later</span> <span class="pill me">v3</span><b>Tier 8</b>Fit into existing tools</a>
+  <a href="#t9"><span class="pill later">Later</span> <span class="pill me">v4</span><b>Tier 9</b>Semantic layer + conversation</a>
+  <a href="#t10"><span class="pill later">Later</span> <span class="pill me">v2</span><b>Tier 10</b>Proof on someone else's agent</a>
+  <a href="#t11"><span class="pill later">Later</span> <span class="pill me">v4</span><b>Tier 11</b>Publish</a>
 </div>
 
 <p class="muted">Owner tags on every task: <span class="pill you">You</span> needs your decision, access or review. <span class="pill me">Claude</span> I build it. <span class="pill both">Together</span> a working session.</p>
@@ -338,6 +362,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>D10</td><td>Run the batch rules on our own runner or as a dbt package?</td><td>llm-cost-explainer runner (DuckDB) · dbt package (dbt-duckdb locally, any dbt warehouse for clients) · both</td><td><b>Test before deciding:</b> two cost rules as a dbt package in Tier 5, compared with the existing runner on effort and reach.</td></tr>
 <tr><td>D11</td><td>Who may switch a rule off?</td><td>The agent team, any rule · The agent team, except rules the risk owner locks · Only the risk owner</td><td><b>Agent team, except locked rules.</b> Teams keep freedom over their own rules; the org keeps its minimum.</td></tr>
 <tr><td>D12</td><td>Is our result format a Python class or a published convention?</td><td>Private class only · Published <code>eval.*</code> conventions (OTel-style), with the class as one implementation</td><td><b>Published conventions.</b> Any tool can then read our results without our code; adopt OTel's GenAI evaluation fields where they exist.</td></tr>
+<tr><td>D13</td><td>Build version 1 as the simple slice first?</td><td>Version 1 slice (pull, shadow, 4 ports, a short check list) · Build tiers in order as listed</td><td><b>Version 1 slice.</b> It tests whether teams find real problems in their own data before we build inline, alerts and integrations.</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -905,6 +930,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added "Keep it simple: version 1" at the top, version tags on every tier, decision D13.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Why there's no open standard for eval, and what we do": adopt, propose upstream to OTel, own spec only if blocked.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Lessons from OpenTelemetry" (11 lessons, what not to copy) and decision D12; tasks added to Tiers 1 and 4.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Attaching to an agent, and turning checks on and off": four ways to attach (instrumentor, gateway, framework hook, decorators), no blocking monkey patches, three config layers with locked rules; decision D11.</td></tr>
