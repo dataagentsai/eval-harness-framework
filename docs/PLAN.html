@@ -84,6 +84,12 @@ svg #ah path{fill:var(--muted)}
   <a href="#help">Where you can help</a>
   <a href="#decisions">Decisions</a>
   <a href="#arch">Architecture</a>
+  <a href="#who">Who writes rules</a>
+  <a href="#inline">Inline moments</a>
+  <a href="#online">Online</a>
+  <a href="#fit">Where every check fits</a>
+  <a href="#dash">Dashboards</a>
+  <a href="#convo">Conversation</a>
   <a href="#binding">Binding per stack</a>
   <a href="#support">Supported / not supported</a>
   <a href="#packs">Content packs</a>
@@ -156,26 +162,29 @@ svg #ah path{fill:var(--muted)}
 </div>
 
 <div class="card" id="t3">
-  <div class="tierhead"><h3>Tier 3 · Five positions and the decide step</h3><span class="pill next">Planned</span></div>
-  <p>Security checks need two more inline places: before the model sees the input, and before a tool runs. Checking and deciding become separate, so the same check can block in one deployment and only alert in another.</p>
+  <div class="tierhead"><h3>Tier 3 · The five inline moments and the decide step</h3><span class="pill next">Planned</span></div>
+  <p>The harness already has the five inline positions (<code>pre_model</code>, <code>post_model</code>, <code>pre_tool</code>, <code>post_tool</code>, <code>reply</code>). This tier lets any adapter run at them, and separates checking from deciding, so the same check can block in one deployment and only alert in another.</p>
   <ul class="tasks">
-    <li><span class="pill me">Claude</span><span>Add the <code>input</code> and <code>tool_call</code> positions beside <code>reply</code>, <code>online</code> and <code>release</code>.</span></li>
+    <li><span class="pill me">Claude</span><span>Run any adapter, ours or a provider's, at any of the five positions, with a time budget per position.</span></li>
     <li><span class="pill me">Claude</span><span><code>Policy</code> port: results become one action (allow, redact, block, escalate, alert, fail the release).</span></li>
     <li><span class="pill me">Claude</span><span>Fail-open or fail-closed set per position in YAML.</span></li>
     <li><span class="pill me">Claude</span><span><code>StateStore</code> port for running totals (budgets, rate counts, repeat calls). In-memory for tests, Redis for production.</span></li>
+    <li><span class="pill me">Claude</span><span>Inline results written onto the trace with rule id and version, so online doesn't judge them twice.</span></li>
     <li><span class="pill me">Claude</span><span>Redaction applies the positions from Presidio's findings.</span></li>
+    <li><span class="pill you">You</span><span>Decision D8: are streaming checks needed?</span></li>
   </ul>
 </div>
 
 <div class="card" id="t4">
-  <div class="tierhead"><h3>Tier 4 · OpenTelemetry in, OpenTelemetry out</h3><span class="pill next">Planned</span></div>
-  <p>OpenTelemetry (OTel) is the standard format for traces. Most tools accept it, so reading OTel in and writing OTel out reaches most of the list below with one adapter each way.</p>
+  <div class="tierhead"><h3>Tier 4 · Online: OpenTelemetry in, OpenTelemetry out</h3><span class="pill next">Planned</span></div>
+  <p>OpenTelemetry (OTel) is the standard format for traces. Online checks run in a separate eval worker, never inside the agent or the Collector. The worker gets traces in one of two ways: a copy from the Collector (tap), or by reading where traces already land (pull).</p>
   <ul class="tasks">
     <li><span class="pill me">Claude</span><span><code>TraceSource</code> adapter: OTel traces that follow the GenAI conventions become <code>EvalRequest</code>s and <code>Session</code>s.</span></li>
+    <li><span class="pill me">Claude</span><span>Tap: an OTLP receiver in the eval worker; a Collector config that sends it a copy.</span></li>
+    <li><span class="pill me">Claude</span><span>Pull: read from Phoenix or Langfuse on a schedule, with backfill (re-run new rules on old traces).</span></li>
+    <li><span class="pill me">Claude</span><span>Skip rules already judged inline; run session rules when a session closes.</span></li>
     <li><span class="pill me">Claude</span><span><code>ResultSink</code> adapter: results as OTel spans, events and metrics. <span class="verify">verify</span> whether the GenAI conventions now define an evaluation-result event, and use it if so.</span></li>
-    <li><span class="pill you">You</span><span>Pick the local development backend (decision D4).</span></li>
-    <li><span class="pill me">Claude</span><span>Scores attached to the same trace, viewable in that backend.</span></li>
-    <li><span class="pill me">Claude</span><span>Online position: read sampled traces, run checks, write results back.</span></li>
+    <li><span class="pill you">You</span><span>Decisions D4 (local backend) and D6 (tap or pull first).</span></li>
   </ul>
 </div>
 
@@ -210,7 +219,7 @@ svg #ah path{fill:var(--muted)}
   <ul class="tasks">
     <li><span class="pill me">Claude</span><span>Pydantic AI hooks (FNOL already uses it).</span></li>
     <li><span class="pill me">Claude</span><span>LangGraph hooks.</span></li>
-    <li><span class="pill me">Claude</span><span>LiteLLM custom guardrail, for agents in any language. It can't see tool calls, so the tool-call position stays in the framework hook. <span class="verify">verify</span></span></li>
+    <li><span class="pill me">Claude</span><span>LiteLLM custom guardrail, for agents in any language. It can't see tool calls, so <code>pre_tool</code> and <code>post_tool</code> stay in the framework hook. <span class="verify">verify</span></span></li>
     <li><span class="pill me">Claude</span><span>Promptfoo custom assertion that calls our checks; read Promptfoo's results JSON in.</span></li>
     <li><span class="pill me">Claude</span><span>CLI for CI (GitHub Actions, Azure DevOps): the release position, where a fail blocks the merge.</span></li>
   </ul>
@@ -231,10 +240,12 @@ svg #ah path{fill:var(--muted)}
 
 <div class="card" id="t9">
   <div class="tierhead"><h3>Tier 9 · Semantic layer and conversation</h3><span class="pill later">Later</span></div>
-  <p>We don't build a semantic engine or a chat UI. We write metric definitions so the client's own tool answers correctly.</p>
+  <p>We don't build a semantic engine or a chat UI. We write metric definitions, plus one small MCP server, so the client's own chat tool can answer correctly. See <a href="#convo">Conversation design</a>.</p>
   <ul class="tasks">
     <li><span class="pill me">Claude</span><span>Metric definitions such as "obligation failure rate", "promise not kept", "eval cost share", in Cube and in Databricks Metric Views.</span></li>
-    <li><span class="pill both">Together</span><span>Test with a natural-language tool over those definitions (Genie, Fabric Copilot, or AskSherlock's approach). The model picks metrics and never writes SQL.</span></li>
+    <li><span class="pill me">Claude</span><span>MCP server with <code>list_metrics</code>, <code>query</code>, <code>compare</code>, <code>top_findings</code>, <code>explain_finding</code>. Read-only, runs as the asking user, never writes SQL.</span></li>
+    <li><span class="pill both">Together</span><span>Test from Claude and from Teams with your ops-style questions.</span></li>
+    <li><span class="pill you">You</span><span>Decision D7: the MCP server as the conversation layer.</span></li>
   </ul>
 </div>
 
@@ -263,7 +274,7 @@ svg #ah path{fill:var(--muted)}
 <tr><th>When</th><th>What I need</th><th>Why it blocks</th></tr>
 <tr><td>Tier 1</td><td>Decisions D1 (name) and D2 (extract)</td><td>The package can't be created without them.</td></tr>
 <tr><td>Tier 2</td><td>A session on the <code>Session</code> data class, then a review of the pattern YAML</td><td>You know what ops teams ask. The patterns are only useful if an ops person can write them.</td></tr>
-<tr><td>Tier 4</td><td>Decision D4 (local backend)</td><td>Decides what runs on the Mac.</td></tr>
+<tr><td>Tier 3–4</td><td>Decisions D4 (local backend), D6 (tap or pull) and D8 (streaming)</td><td>Decides what runs on the Mac.</td></tr>
 <tr><td>Tier 5</td><td>Priority order of the remaining 30 cost rules</td><td>We build in that order.</td></tr>
 <tr><td>Tier 6</td><td>Azure Content Safety access (FNOL's F0 may do)</td><td>Azure security checks can't be recorded without it.</td></tr>
 <tr><td>Tier 8</td><td>A free LangSmith key (optional)</td><td>Otherwise LangSmith is built from docs only and marked untested.</td></tr>
@@ -295,6 +306,9 @@ svg #ah path{fill:var(--muted)}
 <tr><td>D3</td><td>Where inline checks run first</td><td>Framework hooks · LiteLLM gateway</td><td><b>Framework hooks first.</b> Only they see tool calls. LiteLLM second, for non-Python agents.</td></tr>
 <tr><td>D4</td><td>Local development backend</td><td>Arize Phoenix (one Python process) · self-hosted Langfuse (needs ClickHouse, Redis, PostgreSQL and object storage) · Langfuse cloud free tier</td><td><b>Phoenix locally</b>, because self-hosted Langfuse is too heavy for this Mac's memory. Langfuse is still supported as a target for clients.</td></tr>
 <tr><td>D5</td><td>Which semantic layer to write metric definitions for first</td><td>Cube Core · Databricks Metric Views · Power BI / Fabric</td><td>Follow your earlier "by track" choice: Cube for the open track, Metric Views for Databricks clients.</td></tr>
+<tr><td>D6</td><td>How online checks get traces first</td><td>Tap (Collector sends a copy) · Pull (read from Phoenix, Langfuse, LangSmith, App Insights)</td><td><b>Pull first.</b> It works with existing projects and allows backfill. Tap second, for near real-time.</td></tr>
+<tr><td>D7</td><td>Conversation layer</td><td>MCP server over the client's semantic layer · our own chat UI</td><td><b>MCP server.</b> Any chat surface can use it, and we build no UI.</td></tr>
+<tr><td>D8</td><td>Check replies while they stream?</td><td>Yes, check per sentence while streaming · No, check the full reply before sending</td><td><b>No for now.</b> FNOL and clothing don't stream to the customer. Revisit when an agent does.</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -349,9 +363,10 @@ svg #ah path{fill:var(--muted)}
   <text x="304" y="277">4  Decide: allow · redact · block · escalate · alert · fail release</text>
   <rect x="290" y="300" width="430" height="40" rx="6" class="b-plain"/>
   <text x="304" y="325">5  Record: one result format, finding lifecycle</text>
-  <text x="290" y="366" class="t-small">Running totals for budgets and repeat calls: port StateStore (memory, Redis)</text>
-  <text x="290" y="386" class="t-small">Positions: input · tool_call · reply (inline) · online · release · scheduled</text>
-  <text x="290" y="406" class="t-small">Content packs (YAML): quality · security · cost · domain patterns</text>
+  <text x="290" y="362" class="t-small">Running totals for budgets and repeat calls: port StateStore (memory, Redis)</text>
+  <text x="290" y="380" class="t-small">Inline: pre_model · post_model · pre_tool · post_tool · reply</text>
+  <text x="290" y="398" class="t-small">After the fact: online (tap or pull) · release · scheduled</text>
+  <text x="290" y="416" class="t-small">Content packs (YAML): quality · security · cost · domain patterns</text>
 
   <!-- downstream -->
   <text x="780" y="24" class="t-head">DOWNSTREAM · we write to</text>
@@ -415,6 +430,117 @@ svg #ah path{fill:var(--muted)}
 <tr><td>Finding record</td><td>Rule id plus scope, lifecycle state, first and last seen, evidence ids</td><td><span class="pill next">Tier 5</span></td></tr>
 </table></div>
 
+<!-- ================================================================== RULES -->
+
+<h2 id="who">Who writes the rules</h2>
+<p>Writing a rule and placing it are separate jobs. A rule is written once; YAML decides where it runs and what a failure does. Rules are YAML in the repo, reviewed like code, and every result records the rule's version.</p>
+<div class="tbl"><table>
+<tr><th>Who</th><th>Writes</th><th>Example</th></tr>
+<tr><td><b>Us (framework)</b></td><td>Built-in packs: ops metrics, the 36 cost rules, security checks, the five domain patterns, the adapters</td><td>LLM-15 loops, PII check, <code>requires_before</code></td></tr>
+<tr><td><b>Agent or domain team</b></td><td>Domain patterns filled in with their tool names and limits</td><td>"cancel_order needs get_order", "refund ≤ ₹5,000"</td></tr>
+<tr><td><b>Risk, compliance or ops owner</b></td><td>Placement and consequence: which position, block or alert, sampling, thresholds</td><td>"refund over limit: block at <code>pre_tool</code>, count online"</td></tr>
+<tr><td><b>The Assurance spec</b> (later)</td><td>Rules generated from obligations by the compiler</td><td>Each obligation becomes one or more rules</td></tr>
+</table></div>
+
+<h2 id="inline">Inline: the five moments</h2>
+<p>These positions already exist in <code>agent_harness.policy.Position</code>. What a block does depends on the moment. Rule of thumb: <b>inline only takes fast checks</b> (plain code or a small classifier within a time budget). Large judge models go online.</p>
+<div class="tbl"><table>
+<tr><th>Position</th><th>Moment</th><th>What a block does</th><th>Typical checks</th></tr>
+<tr><td><code>pre_model</code></td><td>Before the request goes to the model</td><td>Ends the turn with a refusal, so nothing is paid for</td><td>Injection in the user message or retrieved documents, context over limit, missing output limit (LLM-16), budget cap</td></tr>
+<tr><td><code>post_model</code></td><td>The model answered; nothing has acted on it yet</td><td>Ends the turn</td><td>Unparseable output (LLM-27), output schema, reasoning budget used</td></tr>
+<tr><td><code>pre_tool</code></td><td>The model chose a tool and arguments; it hasn't run</td><td>Returns an error to the model, which may choose again</td><td>Allow-list, refund limit, "cancel needs get_order", loops (LLM-15)</td></tr>
+<tr><td><code>post_tool</code></td><td>The tool's result, before it enters the context</td><td>Replaces the result; the action itself already happened</td><td>Injection hidden in tool output, personal data from a backend system</td></tr>
+<tr><td><code>reply</code></td><td>What the customer is about to read, on every route</td><td>A safe reply instead</td><td>PII, unbacked promises, facts matching tool results</td></tr>
+</table></div>
+<p class="muted">"While a tool runs": the tool is outside us, so we can only check just before (<code>pre_tool</code>) and just after (<code>post_tool</code>). Checking a reply while it streams isn't supported yet (open decision D8).</p>
+
+<h2 id="online">Online: where in the pipeline it runs</h2>
+<div class="tbl"><table>
+<tr><th>Option</th><th>Verdict</th><th>Reason</th></tr>
+<tr><td>Inside the agent, after the reply, before export to OTel</td><td><span class="pill no">Drop</span></td><td>It slows the agent, results are lost if the agent crashes, and it ties eval to every agent's code.</td></tr>
+<tr><td>Inside the OTel Collector</td><td><span class="pill no">Drop</span></td><td>Collector processors are written in Go and meant for filtering and sampling; they can't host Python judges.</td></tr>
+<tr><td><b>Tap:</b> the Collector sends a copy of each trace to our eval worker</td><td><span class="pill done">Pursue (new projects)</span></td><td>Near real-time, and doesn't depend on any store.</td></tr>
+<tr><td><b>Pull:</b> our worker reads traces after they land in LangSmith, Langfuse or App Insights</td><td><span class="pill done">Pursue (existing projects)</span></td><td>Works with what the team has, and can re-run new rules on old traces.</td></tr>
+<tr><td>Prometheus as the source</td><td><span class="pill no">Not possible</span></td><td>It stores numbers, not conversations, so it's always downstream.</td></tr>
+</table></div>
+<ul>
+  <li><b>The converter isn't a separate hop.</b> It's the normalise step, inside the eval worker in both cases.</li>
+  <li><b>No double judging.</b> Inline results are written onto the trace with rule id and version, so online skips any rule already judged on that trace unless configured to re-judge (for example, with a stronger judge).</li>
+  <li><b>Timing.</b> Turn rules run as traces arrive (sampled). Session rules run when a session closes (idle timeout). Rules over many calls run on a schedule.</li>
+</ul>
+
+<h2 id="fit">Where every check fits</h2>
+<p>Each tool's checks against each moment. <b>✔</b> is a good fit. <b>○</b> is possible but slow or costly, so use it only with a time budget or sampling. Blank means it doesn't fit. Inline columns are on the left; columns after the divider run after the fact.</p>
+<div class="tbl"><table>
+<tr><th>Check (provider)</th><th>pre_model</th><th>post_model</th><th>pre_tool</th><th>post_tool</th><th>reply</th><th>│ online turn</th><th>online session</th><th>release</th><th>scheduled</th></tr>
+<tr class="group"><td colspan="10">Security: open source</td></tr>
+<tr><td>Presidio PII detect and redact</td><td>✔ redact before the model provider sees it</td><td></td><td></td><td>✔ data from backends</td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>LLM Guard input scanners (injection, secrets, token limit) <span class="verify">verify</span></td><td>✔</td><td></td><td></td><td>✔ injection in tool output</td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>LLM Guard output scanners (sensitive data, bad URLs, relevance) <span class="verify">verify</span></td><td></td><td>✔</td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Prompt Guard (on Groq) <span class="verify">verify</span></td><td>✔</td><td></td><td></td><td>✔ indirect injection</td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Llama Guard (on Groq)</td><td>○ user harm</td><td></td><td></td><td></td><td>○ reply harm</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Guardrails AI validators (schema, format, competitor names)</td><td></td><td>✔ schema</td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr class="group"><td colspan="10">Security: cloud</td></tr>
+<tr><td>Azure Content Safety: harm categories</td><td>✔</td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Azure Prompt Shields (user prompt and documents)</td><td>✔ user and retrieved docs</td><td></td><td></td><td>✔ documents</td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Azure groundedness detection, protected material</td><td></td><td></td><td></td><td></td><td>○</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>APIM content-safety policy (gateway)</td><td>✔ at the gateway; we read its verdict</td><td>✔ same</td><td></td><td></td><td></td><td>✔ read from headers</td><td></td><td></td><td></td></tr>
+<tr><td>AWS Bedrock <code>ApplyGuardrail</code> (later)</td><td>✔</td><td></td><td></td><td>✔</td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr class="group"><td colspan="10">Quality: eval SDKs (judge models, so not inline)</td></tr>
+<tr><td>Azure AI Evaluation: groundedness, relevance, coherence, fluency</td><td></td><td></td><td></td><td></td><td>○</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Azure AI Evaluation: intent resolution, tool call accuracy, task adherence</td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td>✔</td><td></td></tr>
+<tr><td>Azure safety evaluators, AI Red Teaming Agent (need a Foundry project)</td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td></td><td>✔ red team</td><td></td></tr>
+<tr><td>DeepEval tool correctness (deterministic mode)</td><td></td><td></td><td></td><td></td><td></td><td>○ only if expected tools are known</td><td></td><td>✔</td><td></td></tr>
+<tr><td>DeepEval G-Eval, answer relevancy, hallucination</td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>DeepEval conversational metrics</td><td></td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td></tr>
+<tr><td>Ragas faithfulness, context precision and recall</td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Ragas tool call accuracy, agent goal accuracy</td><td></td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td></tr>
+<tr><td>Promptfoo, Inspect AI (test runners)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td></td></tr>
+<tr class="group"><td colspan="10">Ours: domain patterns</td></tr>
+<tr><td><code>requires_before</code> (cancel needs get_order)</td><td></td><td></td><td>✔ block</td><td></td><td></td><td></td><td>✔ count</td><td>✔</td><td></td></tr>
+<tr><td><code>argument_limit</code> (refund limit)</td><td></td><td></td><td>✔ block</td><td></td><td></td><td>✔ count</td><td></td><td>✔</td><td></td></tr>
+<tr><td><code>claim_needs_action</code> (promised, not done)</td><td></td><td></td><td></td><td></td><td>✔ phrase version</td><td>✔ judge version</td><td>✔</td><td>✔</td><td></td></tr>
+<tr><td><code>decision_vs_should</code> (over/under-escalation)</td><td></td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td>✔ rates</td></tr>
+<tr><td><code>consistency</code> (reply matches tool results)</td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr class="group"><td colspan="10">Ours: cost rules (LLM-01 to 36)</td></tr>
+<tr><td>16, 11, 07, 25, 13, 22, 35, budget caps</td><td>✔ block or fix</td><td></td><td></td><td></td><td></td><td>✔ count</td><td></td><td></td><td>✔</td></tr>
+<tr><td>27 unparseable output</td><td></td><td>✔</td><td></td><td></td><td></td><td>✔</td><td></td><td></td><td>✔</td></tr>
+<tr><td>15 loops</td><td></td><td></td><td>✔ block</td><td></td><td></td><td></td><td>✔</td><td></td><td>✔</td></tr>
+<tr><td>14, 09, 28, 30, 10, 17, 33 (per trace)</td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td></tr>
+<tr><td>The rest (many calls over days)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>✔</td></tr>
+<tr class="group"><td colspan="10">Ours: already in agent-harness</td></tr>
+<tr><td>Screens: fence, PII echo, authority, promise of cover, ungrounded entity</td><td></td><td>✔</td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>Ops metrics (tool failures, context overflow, outcomes, latency)</td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td></tr>
+</table></div>
+
+<h2 id="dash">Dashboards: who owns what</h2>
+<div class="tbl"><table>
+<tr><th>What</th><th>Owner</th></tr>
+<tr><td><b>Two templates only:</b> Grafana (open stack and Prometheus) and an Azure Workbook. Versioned with the result format: a format change updates both in the same commit, tested by loading against sample data.</td><td><b>Us</b></td></tr>
+<tr><td>LangSmith, Langfuse, Phoenix</td><td><b>No template needed.</b> Our results land as their native scores or feedback, so their screens show them.</td></tr>
+<tr><td>Their dashboard instance, access, customisations, alert routing</td><td><b>The client's platform team</b></td></tr>
+<tr><td>Datadog, Kibana and others</td><td>Not supported until a client asks</td></tr>
+</table></div>
+
+<h2 id="convo">Conversation design</h2>
+<p>We don't build a chat UI. We build <b>one small MCP server</b> (MCP is the standard way to give an AI assistant tools) over the client's semantic layer, so any chat surface can use it: Teams, Copilot, Claude, Genie. This is the AskSherlock design, reused.</p>
+<pre>
+ Chat surface (theirs)        MCP server (ours, thin)       Semantic layer (theirs)    Store (theirs)
+ Teams / Copilot / Claude ──► list_metrics()           ──►  Cube / Metric Views    ──► Log Analytics /
+ "How many cancels with       query(metric, by,             compiles the query         ClickHouse / …
+  no order lookup last        filters, period)
+  week, by agent?"            compare(metric, a, b)
+        ▲                     top_findings(pack, period)
+        └── answer + chart +  explain_finding(id) ──► trace links (LangSmith, App Insights)
+            example traces
+</pre>
+<ul>
+  <li><b>The model never writes SQL or KQL.</b> It picks metrics, dimensions and filters that exist in the semantic model. If a metric doesn't exist, it says so instead of improvising.</li>
+  <li><b>Read-only, and runs as the asking user,</b> so their data access rights apply.</li>
+  <li><b>Every answer cites its metric and time period</b>, and links to example traces as evidence.</li>
+  <li>Our parts: the metric definitions (content) and the MCP server. Everything else is the client's.</li>
+</ul>
+
 <!-- ================================================================== BINDING -->
 
 <h2 id="binding">Binding per stack</h2>
@@ -455,6 +581,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <tr class="group"><td colspan="4">Traces and observability</td></tr>
 <tr><td>OpenTelemetry</td><td>Upstream and downstream</td><td>Read GenAI-convention spans from a collector; write results as spans, events and metrics</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
+<tr><td>OpenTelemetry Collector</td><td>Upstream (tap)</td><td>Sends a copy of traces to our eval worker; no eval logic runs inside it</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
 <tr><td>LangSmith</td><td>Upstream and downstream</td><td>Read runs with its SDK; write <code>create_feedback</code> on the same run <span class="verify">verify</span></td><td><span class="pill later">Later · Tier 8</span></td></tr>
 <tr><td>Langfuse</td><td>Upstream and downstream</td><td>Read traces via API; write scores on the trace; datasets for release runs <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 4</span></td></tr>
 <tr><td>Arize Phoenix</td><td>Upstream, downstream, local default</td><td>OTel-native; results as span annotations <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 4</span></td></tr>
@@ -484,7 +611,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 <tr><td>Azure OpenAI / Foundry, Bedrock, Vertex models</td><td>Called</td><td>Same <code>Judge</code> port</td><td><span class="pill later">Later (paying client)</span></td></tr>
 
 <tr class="group"><td colspan="4">Hosts (call us inline)</td></tr>
-<tr><td>Pydantic AI, LangGraph</td><td>Host</td><td>Framework hooks or middleware at input, tool-call and reply</td><td><span class="pill later">Later · Tier 7</span></td></tr>
+<tr><td>Pydantic AI, LangGraph</td><td>Host</td><td>Framework hooks or middleware at all five inline positions</td><td><span class="pill later">Later · Tier 7</span></td></tr>
 <tr><td>Claude Agent SDK, Microsoft Agent Framework</td><td>Host</td><td>Same pattern, one adapter each</td><td><span class="pill later">Later</span></td></tr>
 <tr><td>LiteLLM</td><td>Host</td><td>Custom guardrail hooks before and after the call <span class="verify">verify</span></td><td><span class="pill later">Later · Tier 7</span></td></tr>
 <tr><td>Azure APIM AI gateway</td><td>Upstream</td><td>Content-safety headers, already read by <code>Response.gateway</code></td><td><span class="pill done">Exists in agent-harness</span></td></tr>
@@ -496,6 +623,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 <tr><td>DuckDB</td><td>Called (query engine in our process)</td><td>Runs the cost rules' SQL; not a hosted database</td><td><span class="pill done">Exists in llm-cost-explainer</span></td></tr>
 <tr><td>ClickHouse, Databricks SQL, Log Analytics</td><td>Downstream, and where rules can run</td><td>Results written in; rule SQL or KQL run where the data already is</td><td><span class="pill later">Later</span></td></tr>
 <tr><td>Cube, Databricks Metric Views, Power BI / Fabric</td><td>Content we ship</td><td>Metric definitions</td><td><span class="pill later">Later · Tier 9</span></td></tr>
+<tr><td>MCP server (ours)</td><td>The conversation layer</td><td>Tools over the semantic layer for any chat surface</td><td><span class="pill later">Later · Tier 9</span></td></tr>
 <tr><td>Genie, Fabric Copilot, AskSherlock approach</td><td>The client's conversation tool</td><td>Answers from our metric definitions</td><td><span class="pill later">Later · Tier 9</span></td></tr>
 
 <tr class="group"><td colspan="4">Other upstream data</td></tr>
@@ -524,8 +652,8 @@ alert_sinks:  [azure_monitor_alerts, teams]
 <h4>The 36 cost rules by grain</h4>
 <div class="tbl"><table>
 <tr><th>Grain</th><th>Rules</th><th>Runs as</th></tr>
-<tr><td>One call: can block before it goes out</td><td>16 no output limit · 07 reasoning budget too high · 25 several answers, one used · 13 full-resolution images · 11 every tool definition on every call · 22 priority tier for non-urgent work · 35 test traffic on production keys · budget caps</td><td>Inline guardrail at <code>input</code></td></tr>
-<tr><td>One trace or session</td><td>15 agent loops · 14 aggressive retries · 27 retries after unparseable output · 09 full history every turn · 28 sub-agents re-sending context · 30 chain of calls that could be one · 10 over-retrieval · 17 client gave up, provider billed · 33 calls on every keystroke</td><td>Online evaluator (15 can also block at <code>tool_call</code>)</td></tr>
+<tr><td>One call: can block before it goes out</td><td>16 no output limit · 07 reasoning budget too high · 25 several answers, one used · 13 full-resolution images · 11 every tool definition on every call · 22 priority tier for non-urgent work · 35 test traffic on production keys · budget caps</td><td>Inline guardrail at <code>pre_model</code></td></tr>
+<tr><td>One trace or session</td><td>15 agent loops · 14 aggressive retries · 27 retries after unparseable output · 09 full history every turn · 28 sub-agents re-sending context · 30 chain of calls that could be one · 10 over-retrieval · 17 client gave up, provider billed · 33 calls on every keystroke</td><td>Online evaluator (15 can also block at <code>pre_tool</code>)</td></tr>
 <tr><td>Many calls over days</td><td>01, 02, 26 caching · 03 no response cache · 04 embeddings recomputed · 32 polling unchanged input · 12 bloated system prompt · 29 LLM doing ordinary code's job · 05 one big model for everything · 06 bulk work on real-time API · 21 idle reserved capacity · 24 old model · 08 silent model switch · 19 one user drives cost · 23 spend nobody can attribute · 31 guardrail and judge tax</td><td>Rule runner, scheduled</td></tr>
 <tr><td>Needs data beyond traces</td><td>18 customer costs more than they pay (Stripe) · 36 cost jump at a release (deploys) · 34 background AI nobody looks at (product events) · 21, 23 (billing exports)</td><td>Rule runner plus extra sources</td></tr>
 </table></div>
@@ -571,7 +699,9 @@ alert_sinks:  [azure_monitor_alerts, teams]
 <tr><td><b>Upstream / downstream</b></td><td>Tools we read data from / tools we write results to.</td></tr>
 <tr><td><b>Host</b></td><td>A tool that calls our checks while it runs, such as an agent framework or a gateway.</td></tr>
 <tr><td><b>Called</b></td><td>A service we call during a check, such as Azure Content Safety or a judge model.</td></tr>
-<tr><td><b>Position</b></td><td>The moment a check runs: input, tool_call, reply, online, release, or scheduled.</td></tr>
+<tr><td><b>Position</b></td><td>The moment a check runs. Inline: pre_model, post_model, pre_tool, post_tool, reply. After the fact: online, release, scheduled.</td></tr>
+<tr><td><b>Tap / pull</b></td><td>Two ways online checks get traces: a copy sent by the OTel Collector, or reading them from where they already land.</td></tr>
+<tr><td><b>MCP server</b></td><td>A small service that gives an AI assistant tools; here, tools to query eval metrics.</td></tr>
 <tr><td><b>Grain</b></td><td>How much data a rule looks at: one call, one session, or many calls over days.</td></tr>
 <tr><td><b>Judge</b></td><td>A model that grades another model's output.</td></tr>
 <tr><td><b>Finding</b></td><td>One thing a check found, with where it is and how bad it is. Over time a finding is new, ongoing, resolved or regressed.</td></tr>
@@ -583,6 +713,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added: who writes rules; the five inline moments (now matching the harness, replacing input/tool_call); where online runs (tap or pull); where every check fits; dashboard ownership; conversation design (MCP server). Open decisions D6 to D8.</td></tr>
 <tr><td>17 Oct 2026</td><td>White background; the page no longer follows dark mode.</td></tr>
 <tr><td>17 Oct 2026</td><td>Page created. Tier 0 spike done (four providers, 29 tests). Decisions T1 to T9 recorded. Architecture, binding per stack, the supported and not-supported list, content packs and the cost rules by grain added.</td></tr>
 </table></div>
