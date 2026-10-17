@@ -88,6 +88,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#inline">Inline moments</a>
   <a href="#online">Online</a>
   <a href="#fit">Where every check fits</a>
+  <a href="#after">After results land</a>
   <a href="#dash">Dashboards</a>
   <a href="#convo">Conversation</a>
   <a href="#binding">Binding per stack</a>
@@ -234,6 +235,8 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Rule templates: the same "score fell three days running" rule in KQL (Azure Monitor alerts) and in PromQL (Prometheus alerts).</span></li>
     <li><span class="pill me">Claude</span><span>App Insights workbook template.</span></li>
     <li><span class="pill me">Claude</span><span>Alert sinks: Teams webhook, ServiceNow.</span></li>
+    <li><span class="pill me">Claude</span><span>The loop's later steps: push to review queues, read human labels, judge agreement, failures into golden datasets, weekly report template.</span></li>
+    <li><span class="pill me">Claude</span><span>One shared eval worker deployment per environment; onboarding an agent is YAML only.</span></li>
     <li><span class="pill you">You</span><span>A free LangSmith account and key, if you want this tested against the real service.</span></li>
   </ul>
 </div>
@@ -309,6 +312,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>D6</td><td>How online checks get traces first</td><td>Tap (Collector sends a copy) · Pull (read from Phoenix, Langfuse, LangSmith, App Insights)</td><td><b>Pull first.</b> It works with existing projects and allows backfill. Tap second, for near real-time.</td></tr>
 <tr><td>D7</td><td>Conversation layer</td><td>MCP server over the client's semantic layer · our own chat UI</td><td><b>MCP server.</b> Any chat surface can use it, and we build no UI.</td></tr>
 <tr><td>D8</td><td>Check replies while they stream?</td><td>Yes, check per sentence while streaming · No, check the full reply before sending</td><td><b>No for now.</b> FNOL and clothing don't stream to the customer. Revisit when an agent does.</td></tr>
+<tr><td>D9</td><td>Do we carry the work after results land (the loop)?</td><td>Yes, all of it · Yes, scoped · No, stop at writing scores</td><td><b>Yes, scoped:</b> jobs written once against ports, a five-method adapter per tool, a short supported list, steps 1–6 first. Your instinct (carry it) is right; the scoping is what keeps the work bounded.</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -513,6 +517,35 @@ svg #ah path{fill:var(--muted)}
 <tr><td>Ops metrics (tool failures, context overflow, outcomes, latency)</td><td></td><td></td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td></tr>
 </table></div>
 
+<h2 id="after">After results land: the loop</h2>
+<p>What should happen once traces land in LangSmith, Langfuse, Phoenix or App Insights. Every job is written once against our ports; each tool only needs a small adapter. Prometheus never receives traces, only counts, so after Prometheus only the alert step (7) applies.</p>
+<div class="tbl"><table>
+<tr><th>#</th><th>Step</th><th>Does the tool already do it?</th><th>Ours?</th><th>When</th></tr>
+<tr><td>1</td><td>Pick up new traces, skipping ones already judged inline</td><td>—</td><td><b>Ours</b> (pull job)</td><td>Tier 4</td></tr>
+<tr><td>2</td><td>Run online checks on a sample of turns</td><td>LangSmith and Langfuse have their own judge evaluators, but only their own metrics</td><td><b>Ours</b>: our packs, any provider</td><td>Tier 4</td></tr>
+<tr><td>3</td><td>When a session closes, run the session patterns</td><td>No</td><td><b>Ours</b></td><td>Tier 4</td></tr>
+<tr><td>4</td><td>Run cost rules on a schedule</td><td>No</td><td><b>Ours</b> (llm-cost-explainer)</td><td>Tier 5</td></tr>
+<tr><td>5</td><td>Write results back as their native scores, so their screens show them</td><td>They accept scores</td><td><b>Ours</b>: one adapter method</td><td>Tier 4</td></tr>
+<tr><td>6</td><td>Group repeats into findings (new, ongoing, resolved, regressed)</td><td>No</td><td><b>Ours</b></td><td>Tier 5</td></tr>
+<tr><td>7</td><td>Alert on trends and regressions</td><td>App Insights and Grafana alert well; LangSmith partly <span class="verify">verify</span></td><td><b>Templates</b> for their alerting</td><td>Tier 8</td></tr>
+<tr><td>8</td><td>Send doubtful or failing cases to a human review queue</td><td>LangSmith and Langfuse have annotation queues <span class="verify">verify</span></td><td><b>Theirs</b>; we push items in</td><td>Tier 8</td></tr>
+<tr><td>9</td><td>Read human labels back as ground truth; measure how often the judge agrees</td><td>Labels are stored by them</td><td><b>Ours</b></td><td>Tier 8</td></tr>
+<tr><td>10</td><td>Confirmed failures become golden test cases for the release gate</td><td>Both have datasets</td><td><b>Theirs</b> to store; we add the items</td><td>Tier 8</td></tr>
+<tr><td>11</td><td>Weekly report per agent: top findings, cost, trends</td><td>No</td><td><b>Ours</b>, as a template</td><td>Tier 8</td></tr>
+</table></div>
+<h4>Built once, used by every team</h4>
+<ul>
+  <li><b>Jobs are written against ports, not tools.</b> A job calls <code>TraceSource</code> and <code>ResultSink</code> and never knows which tool is underneath.</li>
+  <li><b>Each tool needs one small adapter with five methods:</b> <code>read_traces</code>, <code>write_score</code>, <code>add_to_review</code>, <code>read_labels</code>, <code>add_to_dataset</code>. A tool without a feature declares it, and that step is skipped for that tool. Work grows as jobs plus tools, not jobs times tools.</li>
+  <li><b>One shared eval worker per environment, run by a platform team</b>, serving all agents. Each agent team only adds YAML. Onboarding a new agent is a config change.</li>
+</ul>
+<h4>Keeping the work under control</h4>
+<ul>
+  <li>Support a short list properly: Phoenix or Langfuse (open stack), App Insights (Azure), LangSmith when a client brings it. Everything else is on request.</li>
+  <li>Never build what the tool has: no review UI, no dataset UI, no alerting engine.</li>
+  <li>Steps 1–6 first (the core loop), then 7–11 one at a time.</li>
+</ul>
+
 <h2 id="dash">Dashboards: who owns what</h2>
 <div class="tbl"><table>
 <tr><th>What</th><th>Owner</th></tr>
@@ -713,6 +746,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added "After results land: the loop" (11 steps, who does each, built once via a five-method adapter per tool) and decision D9.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added: who writes rules; the five inline moments (now matching the harness, replacing input/tool_call); where online runs (tap or pull); where every check fits; dashboard ownership; conversation design (MCP server). Open decisions D6 to D8.</td></tr>
 <tr><td>17 Oct 2026</td><td>White background; the page no longer follows dark mode.</td></tr>
 <tr><td>17 Oct 2026</td><td>Page created. Tier 0 spike done (four providers, 29 tests). Decisions T1 to T9 recorded. Architecture, binding per stack, the supported and not-supported list, content packs and the cost rules by grain added.</td></tr>
