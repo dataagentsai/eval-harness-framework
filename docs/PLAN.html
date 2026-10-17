@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eval Harness Plan</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#e3e3df;
+  --accent:#0f6cbd; --done:#1a7f37; --doing:#b26a00; --next:#0f6cbd; --later:#8250df; --no:#a8071a;
+  --done-bg:#e8f5ec; --doing-bg:#fff4e0; --next-bg:#e7f0fb; --later-bg:#f3ecfd; --no-bg:#fdecee;
+  --you:#8a4b00; --you-bg:#fdf1dc; --code:#f0f0ec;
+  --box-in:#e7f0fb; --box-core:#e8f5ec; --box-out:#f3ecfd; --box-call:#fff4e0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141518; --card:#1d1f23; --ink:#e8e8ea; --muted:#a0a4ab; --line:#2e3137;
+    --accent:#5aa7ff; --done:#4cc76a; --doing:#f0a640; --next:#5aa7ff; --later:#b48cff; --no:#ff7a85;
+    --done-bg:#16301f; --doing-bg:#3a2a10; --next-bg:#14263d; --later-bg:#2a1f3d; --no-bg:#3a161b;
+    --you:#f3b45c; --you-bg:#3a2a10; --code:#26282d;
+    --box-in:#14263d; --box-core:#16301f; --box-out:#2a1f3d; --box-call:#3a2a10;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141518; --card:#1d1f23; --ink:#e8e8ea; --muted:#a0a4ab; --line:#2e3137;
+  --accent:#5aa7ff; --done:#4cc76a; --doing:#f0a640; --next:#5aa7ff; --later:#b48cff; --no:#ff7a85;
+  --done-bg:#16301f; --doing-bg:#3a2a10; --next-bg:#14263d; --later-bg:#2a1f3d; --no-bg:#3a161b;
+  --you:#f3b45c; --you-bg:#3a2a10; --code:#26282d;
+  --box-in:#14263d; --box-core:#16301f; --box-out:#2a1f3d; --box-call:#3a2a10;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:21px;margin:40px 0 10px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:17px;margin:0 0 6px}
+h4{font-size:15px;margin:16px 0 6px}
+p{margin:6px 0 10px}
+.muted{color:var(--muted)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:13px}
+pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.45}
+a{color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}
+.tbl{width:100%;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:7px 9px;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr.group td{background:var(--code);font-weight:600;font-size:13px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.done{color:var(--done);background:var(--done-bg)}
+.doing{color:var(--doing);background:var(--doing-bg)}
+.next{color:var(--next);background:var(--next-bg)}
+.later{color:var(--later);background:var(--later-bg)}
+.no{color:var(--no);background:var(--no-bg)}
+.you{color:var(--you);background:var(--you-bg)}
+.me{color:var(--muted);background:var(--code)}
+.both{color:var(--next);background:var(--next-bg)}
+.verify{font-size:11px;color:var(--doing);font-weight:600}
+.strip{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+.strip a{flex:1 1 130px;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px}
+.strip a b{display:block;font-size:14px}
+nav.toc{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;margin:10px 0}
+ul.tasks{margin:6px 0 8px;padding-left:0;list-style:none}
+ul.tasks li{margin:5px 0;display:flex;gap:8px;align-items:baseline}
+ul.tasks li .pill{flex:0 0 auto}
+ul.tasks li.ok>span:last-child{color:var(--muted)}
+.dw{border-left:3px solid var(--accent);padding:4px 10px;margin:8px 0;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.tierhead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.diagram{overflow-x:auto}
+.diagram svg{min-width:760px;width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+svg .t-small{font-size:11.5px;fill:var(--muted)}
+svg .t-head{font-weight:700;font-size:13.5px}
+svg .b-in{fill:var(--box-in);stroke:var(--line)}
+svg .b-core{fill:var(--box-core);stroke:var(--line)}
+svg .b-out{fill:var(--box-out);stroke:var(--line)}
+svg .b-call{fill:var(--box-call);stroke:var(--line)}
+svg .b-plain{fill:var(--card);stroke:var(--line)}
+svg .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#ah)}
+svg .both-ends{marker-start:url(#ah)}
+svg #ah path{fill:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Eval Harness Framework: the plan</h1>
+<p class="muted">The single page for this project: what we're building, how it's wired, what we support, and the tiers of work. Last updated <b>17 Oct 2026</b>. It's updated whenever a tier moves; the change log is at the bottom. Repo: <a href="https://github.com/dataagentsai/eval-harness-framework">dataagentsai/eval-harness-framework</a>.</p>
+
+<div class="card">
+  <p><b>In one line:</b> one framework that checks AI agents (quality, security, cost and the business's own rules), using the best check from any provider, giving one result you can trust, and plugging into the tools a team already uses.</p>
+  <p><b>Why it's needed:</b> every agent project rebuilds the same things: read traces, run some checks, call a guardrail service, apply rules, show results. Each eval and guardrail tool has its own data shapes, so using two tools together means writing glue every time. This framework writes that glue once.</p>
+  <p><b>What it is not:</b> it isn't a database, a UI, a dashboard product or a semantic layer. It feeds the ones a team already has (LangSmith, Langfuse, App Insights, Grafana) and ships ready-made content for them.</p>
+  <p><b>How it relates to the Agent Assurance Layer:</b> the Assurance Layer is the <i>spec</i> (what must be true about an agent). This framework is the <i>implementation</i> (the engine that checks it).</p>
+</div>
+
+<nav class="toc">
+  <a href="#tiers">Tiers and todos</a>
+  <a href="#help">Where you can help</a>
+  <a href="#decisions">Decisions</a>
+  <a href="#arch">Architecture</a>
+  <a href="#binding">Binding per stack</a>
+  <a href="#support">Supported / not supported</a>
+  <a href="#packs">Content packs</a>
+  <a href="#questions">Questions it must answer</a>
+  <a href="#words">Words used here</a>
+  <a href="#log">Change log</a>
+</nav>
+
+<div class="strip" id="tiers">
+  <a href="#t0"><span class="pill done">Done</span><b>Tier 0</b>Spike: one shape, four providers</a>
+  <a href="#t1"><span class="pill next">Next</span><b>Tier 1</b>Verified landscape + core package</a>
+  <a href="#t2"><span class="pill next">Planned</span><b>Tier 2</b>Sessions + domain patterns</a>
+  <a href="#t3"><span class="pill next">Planned</span><b>Tier 3</b>Positions + the decide step</a>
+  <a href="#t4"><span class="pill next">Planned</span><b>Tier 4</b>OpenTelemetry in and out</a>
+  <a href="#t5"><span class="pill next">Planned</span><b>Tier 5</b>Cost pack (36 rules)</a>
+  <a href="#t6"><span class="pill next">Planned</span><b>Tier 6</b>Security pack</a>
+  <a href="#t7"><span class="pill later">Later</span><b>Tier 7</b>Host adapters</a>
+  <a href="#t8"><span class="pill later">Later</span><b>Tier 8</b>Fit into existing tools</a>
+  <a href="#t9"><span class="pill later">Later</span><b>Tier 9</b>Semantic layer + conversation</a>
+  <a href="#t10"><span class="pill later">Later</span><b>Tier 10</b>Proof on someone else's agent</a>
+  <a href="#t11"><span class="pill later">Later</span><b>Tier 11</b>Publish</a>
+</div>
+
+<p class="muted">Owner tags on every task: <span class="pill you">You</span> needs your decision, access or review. <span class="pill me">Claude</span> I build it. <span class="pill both">Together</span> a working session.</p>
+
+<!-- ================================================================== TIERS -->
+
+<h2>Tiers and todos</h2>
+
+<div class="card" id="t0">
+  <div class="tierhead"><h3>Tier 0 · Spike: can one data shape hold several providers?</h3><span class="pill done">Done 17 Oct</span></div>
+  <p>The hardest part was making our data classes, open-source classes and Azure's SDK fit together. We ran four providers on the same five requests through one <code>EvalRequest</code>. It held. Details: <a href="../FINDINGS.md">FINDINGS.md</a>.</p>
+  <ul class="tasks">
+    <li class="ok"><span class="pill done">Done</span><span>Three-part adapter: translate in, call, translate out. Only the middle part touches the vendor.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Azure groundedness (with Groq as the judge, so no Azure account), DeepEval tool correctness, Ragas faithfulness, Presidio PII.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Recorded every provider's real answer; 29 offline table tests over them.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Found what the result needs: <code>raw</code>, <code>findings</code> (with confidence and severity kept apart) and <code>dropped</code>; a declared <code>Scale</code>; one <code>Judge</code> setting.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Public repo, Apache-2.0.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t1">
+  <div class="tierhead"><h3>Tier 1 · Verified landscape, then the core package</h3><span class="pill next">Next</span></div>
+  <p>First, check that what this page says about other tools is still true, because these tools change monthly. Then lift the spike into a real package that the reference agent also uses, so the code exists once.</p>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>Landscape check with sources: LangSmith, Langfuse, Phoenix, Braintrust, Azure Foundry evaluation, Bedrock evaluations and guardrails, Promptfoo, Inspect. For each: does it already mix providers, block inline, or link checks to a spec? Every item marked <span class="verify">verify</span> on this page gets confirmed or corrected.</span></li>
+    <li><span class="pill you">You</span><span>Pick the package name (decision D1).</span></li>
+    <li><span class="pill you">You</span><span>Agree on extracting rather than copying (decision D2).</span></li>
+    <li><span class="pill me">Claude</span><span>New package in this repo with the ports, <code>EvalRequest</code>, the extended <code>Result</code>, <code>Finding</code>, <code>Scale</code> and <code>Judge</code>.</span></li>
+    <li><span class="pill me">Claude</span><span><code>agent_harness.evals</code> in reference-agent imports from the new package instead of defining its own. FNOL and clothing tests must still pass unchanged.</span></li>
+    <li><span class="pill me">Claude</span><span>Import contract: no vendor SDK imported outside its own adapter module.</span></li>
+    <li><span class="pill me">Claude</span><span>A contract test table per port that every adapter must pass.</span></li>
+    <li><span class="pill me">Claude</span><span>Move the four spike adapters into an adapters package; scales and severities move into <code>evaluators.yaml</code>.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t2">
+  <div class="tierhead"><h3>Tier 2 · Sessions and the domain patterns</h3><span class="pill next">Planned</span></div>
+  <p>Most of the questions ops teams ask are about a whole conversation, not one reply: "a cancel happened with no order lookup before it", "a refund was promised but never issued". These need a session-level shape and a small set of reusable patterns that a domain team fills in with YAML.</p>
+  <ul class="tasks">
+    <li><span class="pill both">Together</span><span>Design the <code>Session</code> data class: the ordered turns, every tool call with its result and id, decisions such as escalation, and the outcome.</span></li>
+    <li><span class="pill me">Claude</span><span>Pattern <code>requires_before</code>: action B needs action A earlier in the session.</span></li>
+    <li><span class="pill me">Claude</span><span>Pattern <code>argument_limit</code>: a tool argument above or below a value (refund limit).</span></li>
+    <li><span class="pill me">Claude</span><span>Pattern <code>claim_needs_action</code>: a judge model lists what the reply <i>says</i> was done, then a plain code check compares that with the tool calls.</span></li>
+    <li><span class="pill me">Claude</span><span>Pattern <code>decision_vs_should</code>: over- and under-escalation, against a rule, a judge or a human-labelled sample. Each number says which source it came from.</span></li>
+    <li><span class="pill me">Claude</span><span>Pattern <code>consistency</code>: facts in the reply must match the tool results.</span></li>
+    <li><span class="pill you">You</span><span>Review the pattern YAML: could an ops person write it without help?</span></li>
+    <li><span class="pill me">Claude</span><span>Run all five on FNOL and clothing-agent traces.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t3">
+  <div class="tierhead"><h3>Tier 3 · Five positions and the decide step</h3><span class="pill next">Planned</span></div>
+  <p>Security checks need two more inline places: before the model sees the input, and before a tool runs. Checking and deciding become separate, so the same check can block in one deployment and only alert in another.</p>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>Add the <code>input</code> and <code>tool_call</code> positions beside <code>reply</code>, <code>online</code> and <code>release</code>.</span></li>
+    <li><span class="pill me">Claude</span><span><code>Policy</code> port: results become one action (allow, redact, block, escalate, alert, fail the release).</span></li>
+    <li><span class="pill me">Claude</span><span>Fail-open or fail-closed set per position in YAML.</span></li>
+    <li><span class="pill me">Claude</span><span><code>StateStore</code> port for running totals (budgets, rate counts, repeat calls). In-memory for tests, Redis for production.</span></li>
+    <li><span class="pill me">Claude</span><span>Redaction applies the positions from Presidio's findings.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t4">
+  <div class="tierhead"><h3>Tier 4 · OpenTelemetry in, OpenTelemetry out</h3><span class="pill next">Planned</span></div>
+  <p>OpenTelemetry (OTel) is the standard format for traces. Most tools accept it, so reading OTel in and writing OTel out reaches most of the list below with one adapter each way.</p>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span><code>TraceSource</code> adapter: OTel traces that follow the GenAI conventions become <code>EvalRequest</code>s and <code>Session</code>s.</span></li>
+    <li><span class="pill me">Claude</span><span><code>ResultSink</code> adapter: results as OTel spans, events and metrics. <span class="verify">verify</span> whether the GenAI conventions now define an evaluation-result event, and use it if so.</span></li>
+    <li><span class="pill you">You</span><span>Pick the local development backend (decision D4).</span></li>
+    <li><span class="pill me">Claude</span><span>Scores attached to the same trace, viewable in that backend.</span></li>
+    <li><span class="pill me">Claude</span><span>Online position: read sampled traces, run checks, write results back.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t5">
+  <div class="tierhead"><h3>Tier 5 · Cost pack: the 36 LLM cost rules</h3><span class="pill next">Planned</span></div>
+  <p>The rules LLM-01 to LLM-36 (DataAgents.ai/57 and 61). Six are already built in <code>~/llm-cost-explainer</code>. Most look at many calls over days, so they run on a second engine (the rule runner) reused from llm-cost-explainer. About eight can also block a call before it goes out.</p>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>One rule format for both engines. Its <code>grain</code> picks the engine: call, trace or session go to evaluators; prefix cluster, day or usage bucket go to the rule runner.</span></li>
+    <li><span class="pill me">Claude</span><span>Use llm-cost-explainer's rule runner as a library (it stays its own product too). DuckDB runs in-process; the same SQL can also run where the data already is, such as ClickHouse or Databricks.</span></li>
+    <li><span class="pill me">Claude</span><span>Inline cost guardrails: LLM-16, 07, 25, 13, 11, 22, 35 and budget caps.</span></li>
+    <li><span class="pill me">Claude</span><span>Trace-level cost rules: LLM-15, 14, 27, 09, 28, 30, 10, 17, 33.</span></li>
+    <li><span class="pill me">Claude</span><span>Finding lifecycle for every pack: new, ongoing, resolved, regressed, snoozed, accepted.</span></li>
+    <li><span class="pill me">Claude</span><span>LLM-31 ("guardrail and judge tax") runs on our own checks' cost.</span></li>
+    <li><span class="pill you">You</span><span>Order of the remaining 30 rules: which matter first for your clients?</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t6">
+  <div class="tierhead"><h3>Tier 6 · Security pack</h3><span class="pill next">Planned</span></div>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>Presidio for India: PAN, Aadhaar and Indian phone formats; merge overlapping hits; severity per entity type in YAML; a larger spaCy model if memory allows.</span></li>
+    <li><span class="pill me">Claude</span><span>LLM Guard scanners for prompt injection and secrets.</span></li>
+    <li><span class="pill me">Claude</span><span>Llama Guard and Prompt Guard on Groq, as the free open alternative to Azure Content Safety. <span class="verify">verify</span> current Groq availability.</span></li>
+    <li><span class="pill you">You</span><span>Access to an Azure Content Safety resource. FNOL's free tier (F0) behind APIM may be enough.</span></li>
+    <li><span class="pill me">Claude</span><span>Azure Content Safety adapters: harm categories, Prompt Shields, protected material.</span></li>
+    <li><span class="pill me">Claude</span><span>Tool-call checks: allow-list per customer, arguments within limits, data from one customer never reaching another.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t7">
+  <div class="tierhead"><h3>Tier 7 · Host adapters: where inline checks run</h3><span class="pill later">Later</span></div>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>Pydantic AI hooks (FNOL already uses it).</span></li>
+    <li><span class="pill me">Claude</span><span>LangGraph hooks.</span></li>
+    <li><span class="pill me">Claude</span><span>LiteLLM custom guardrail, for agents in any language. It can't see tool calls, so the tool-call position stays in the framework hook. <span class="verify">verify</span></span></li>
+    <li><span class="pill me">Claude</span><span>Promptfoo custom assertion that calls our checks; read Promptfoo's results JSON in.</span></li>
+    <li><span class="pill me">Claude</span><span>CLI for CI (GitHub Actions, Azure DevOps): the release position, where a fail blocks the merge.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t8">
+  <div class="tierhead"><h3>Tier 8 · Fit into tools teams already use</h3><span class="pill later">Later</span></div>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>LangSmith: read runs in, write results back as feedback on the same run. <span class="verify">verify</span></span></li>
+    <li><span class="pill me">Claude</span><span>App Insights: read with KQL, write custom events and metrics with the Azure Monitor exporter. Uses FNOL's App Insights.</span></li>
+    <li><span class="pill me">Claude</span><span>Prometheus metrics plus a Grafana dashboard template.</span></li>
+    <li><span class="pill me">Claude</span><span>Rule templates: the same "score fell three days running" rule in KQL (Azure Monitor alerts) and in PromQL (Prometheus alerts).</span></li>
+    <li><span class="pill me">Claude</span><span>App Insights workbook template.</span></li>
+    <li><span class="pill me">Claude</span><span>Alert sinks: Teams webhook, ServiceNow.</span></li>
+    <li><span class="pill you">You</span><span>A free LangSmith account and key, if you want this tested against the real service.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t9">
+  <div class="tierhead"><h3>Tier 9 · Semantic layer and conversation</h3><span class="pill later">Later</span></div>
+  <p>We don't build a semantic engine or a chat UI. We write metric definitions so the client's own tool answers correctly.</p>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>Metric definitions such as "obligation failure rate", "promise not kept", "eval cost share", in Cube and in Databricks Metric Views.</span></li>
+    <li><span class="pill both">Together</span><span>Test with a natural-language tool over those definitions (Genie, Fabric Copilot, or AskSherlock's approach). The model picks metrics and never writes SQL.</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t10">
+  <div class="tierhead"><h3>Tier 10 · Proof on an agent we didn't build</h3><span class="pill later">Later</span></div>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>Pick an open-source LangGraph agent and add the framework with only YAML and one hook adapter.</span></li>
+    <li><span class="pill me">Claude</span><span>Show one rule (for example a refund limit) running in four places: before deploy, at the framework hook, at the gateway, and over traces. This is the Assurance Layer's planned one-week spike.</span></li>
+    <li><span class="pill you">You</span><span>Judge it: would a team adopt this without us in the room?</span></li>
+  </ul>
+</div>
+
+<div class="card" id="t11">
+  <div class="tierhead"><h3>Tier 11 · Publish</h3><span class="pill later">Later</span></div>
+  <ul class="tasks">
+    <li><span class="pill me">Claude</span><span>Docs site, three worked examples (open stack, Azure, existing LangSmith project), PyPI release.</span></li>
+    <li><span class="pill both">Together</span><span>Write-up: "mix any provider's checks, honestly". The spike's findings are the story.</span></li>
+  </ul>
+</div>
+
+<!-- ================================================================== HELP -->
+
+<h2 id="help">Where you can help</h2>
+<p>Everything tagged <span class="pill you">You</span> above, in the order it blocks work:</p>
+<div class="tbl"><table>
+<tr><th>When</th><th>What I need</th><th>Why it blocks</th></tr>
+<tr><td>Tier 1</td><td>Decisions D1 (name) and D2 (extract)</td><td>The package can't be created without them.</td></tr>
+<tr><td>Tier 2</td><td>A session on the <code>Session</code> data class, then a review of the pattern YAML</td><td>You know what ops teams ask. The patterns are only useful if an ops person can write them.</td></tr>
+<tr><td>Tier 4</td><td>Decision D4 (local backend)</td><td>Decides what runs on the Mac.</td></tr>
+<tr><td>Tier 5</td><td>Priority order of the remaining 30 cost rules</td><td>We build in that order.</td></tr>
+<tr><td>Tier 6</td><td>Azure Content Safety access (FNOL's F0 may do)</td><td>Azure security checks can't be recorded without it.</td></tr>
+<tr><td>Tier 8</td><td>A free LangSmith key (optional)</td><td>Otherwise LangSmith is built from docs only and marked untested.</td></tr>
+<tr><td>Any time</td><td>Real domain questions from GSK-style ops work (mock data is fine)</td><td>They test whether the five patterns are enough.</td></tr>
+</table></div>
+
+<!-- ================================================================== DECISIONS -->
+
+<h2 id="decisions">Decisions</h2>
+<h4>Taken</h4>
+<div class="tbl"><table>
+<tr><th>#</th><th>Decision</th><th>Why</th><th>Date</th></tr>
+<tr><td>T1</td><td>Build it, but only the parts that don't exist yet</td><td>Most pieces exist; the glue, the honest mix and the spec link don't.</td><td>17 Oct</td></tr>
+<tr><td>T2</td><td>IoC: every vendor, cloud and check behind a port; swapping one is an adapter plus a YAML line</td><td>The same framework must run open-stack, on Azure, and later on AWS or GCP.</td><td>17 Oct</td></tr>
+<tr><td>T3</td><td>The Assurance Layer is the spec; this is the implementation</td><td>Keeps "what must be true" separate from "how we check it".</td><td>17 Oct</td></tr>
+<tr><td>T4</td><td>Security and cost checks are in scope; identity, network, secrets and billing are not</td><td>Anything that looks at what the agent does belongs here; anything that controls access to it belongs to the platform.</td><td>17 Oct</td></tr>
+<tr><td>T5</td><td>No database, UI, dashboards or semantic engine of our own; fit into existing tools and ship content for them</td><td>They already exist, and teams won't move off theirs.</td><td>17 Oct</td></tr>
+<tr><td>T6</td><td>The USP: mix providers' checks honestly (one scale, declared losses, cost per check), plus built-in rules, guardrails and patterns</td><td>Mapping alone is easy to copy; the honest mix plus the bundle isn't.</td><td>17 Oct</td></tr>
+<tr><td>T7</td><td>The 36 cost rules are covered; llm-cost-explainer stays its own product and is also used as a library</td><td>Its rule runner is the population engine we need.</td><td>17 Oct</td></tr>
+<tr><td>T8</td><td>Public repo, Apache-2.0</td><td>Same as your other public repos.</td><td>17 Oct</td></tr>
+<tr><td>T9</td><td>Free judge models (Groq) by default; paid APIs only when a client already pays for them</td><td>Your standing rule for personal projects.</td><td>standing</td></tr>
+</table></div>
+
+<h4>Open</h4>
+<div class="tbl"><table>
+<tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
+<tr><td>D1</td><td>Package name</td><td><code>evalharness</code> (matches the repo) · <code>agentchecks</code> · <code>assurekit</code></td><td><b><code>evalharness</code></b>: one name for repo and package. Rename later if it becomes a product.</td></tr>
+<tr><td>D2</td><td>Extract or copy <code>agent_harness.evals</code>?</td><td>Extract (agent-harness depends on the new package) · Copy (two versions drift)</td><td><b>Extract.</b> One copy of the classes; FNOL and clothing tests prove nothing broke.</td></tr>
+<tr><td>D3</td><td>Where inline checks run first</td><td>Framework hooks · LiteLLM gateway</td><td><b>Framework hooks first.</b> Only they see tool calls. LiteLLM second, for non-Python agents.</td></tr>
+<tr><td>D4</td><td>Local development backend</td><td>Arize Phoenix (one Python process) · self-hosted Langfuse (needs ClickHouse, Redis, PostgreSQL and object storage) · Langfuse cloud free tier</td><td><b>Phoenix locally</b>, because self-hosted Langfuse is too heavy for this Mac's memory. Langfuse is still supported as a target for clients.</td></tr>
+<tr><td>D5</td><td>Which semantic layer to write metric definitions for first</td><td>Cube Core · Databricks Metric Views · Power BI / Fabric</td><td>Follow your earlier "by track" choice: Cube for the open track, Metric Views for Databricks clients.</td></tr>
+</table></div>
+
+<!-- ================================================================== ARCH -->
+
+<h2 id="arch">Architecture</h2>
+<p>Data comes in from where the agent already writes it, flows through one engine, and goes out to the tools the team already uses. During processing, the engine calls outside services for the checks themselves.</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 1040 560" role="img" aria-label="Architecture: inputs on the left, the engine in the middle, outputs on the right, called services below">
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+
+  <!-- upstream -->
+  <text x="20" y="24" class="t-head">UPSTREAM · we read from</text>
+  <rect x="20" y="36" width="210" height="196" rx="8" class="b-in"/>
+  <text x="34" y="62">OpenTelemetry traces</text>
+  <text x="34" y="86">LangSmith runs</text>
+  <text x="34" y="110">Langfuse / Phoenix traces</text>
+  <text x="34" y="134">App Insights (KQL)</text>
+  <text x="34" y="158">Promptfoo results</text>
+  <text x="34" y="182">Golden datasets</text>
+  <text x="34" y="206">Usage exports, deploys, Stripe</text>
+  <text x="34" y="224" class="t-small">port: TraceSource</text>
+
+  <!-- host -->
+  <text x="20" y="266" class="t-head">HOST · calls us inline</text>
+  <rect x="20" y="278" width="210" height="150" rx="8" class="b-in"/>
+  <text x="34" y="304">Pydantic AI, LangGraph,</text>
+  <text x="34" y="324">Agent SDK hooks</text>
+  <text x="34" y="350">LiteLLM gateway</text>
+  <text x="34" y="374">Promptfoo assertion</text>
+  <text x="34" y="398">CI step (release gate)</text>
+  <text x="34" y="420" class="t-small">port: InlineHook</text>
+
+  <!-- engine -->
+  <text x="270" y="24" class="t-head">ENGINE · what we build</text>
+  <rect x="270" y="36" width="470" height="392" rx="10" class="b-core"/>
+  <rect x="290" y="52" width="430" height="40" rx="6" class="b-plain"/>
+  <text x="304" y="77">1  Normalise: any source becomes EvalRequest / Session</text>
+  <rect x="290" y="100" width="430" height="40" rx="6" class="b-plain"/>
+  <text x="304" y="125">2  Plan (YAML): which check, which position, sampling, budget</text>
+  <rect x="290" y="148" width="210" height="96" rx="6" class="b-plain"/>
+  <text x="304" y="171" class="t-head">3a  Evaluator</text>
+  <text x="304" y="193" class="t-small">one call, trace or session</text>
+  <text x="304" y="211" class="t-small">inline and online</text>
+  <text x="304" y="229" class="t-small">ports: Evaluator, Judge</text>
+  <rect x="510" y="148" width="210" height="96" rx="6" class="b-plain"/>
+  <text x="524" y="171" class="t-head">3b  Rule runner</text>
+  <text x="524" y="193" class="t-small">many calls over days</text>
+  <text x="524" y="211" class="t-small">SQL; from llm-cost-explainer</text>
+  <text x="524" y="229" class="t-small">port: RuleRunner</text>
+  <rect x="290" y="252" width="430" height="40" rx="6" class="b-plain"/>
+  <text x="304" y="277">4  Decide: allow · redact · block · escalate · alert · fail release</text>
+  <rect x="290" y="300" width="430" height="40" rx="6" class="b-plain"/>
+  <text x="304" y="325">5  Record: one result format, finding lifecycle</text>
+  <text x="290" y="366" class="t-small">Running totals for budgets and repeat calls: port StateStore (memory, Redis)</text>
+  <text x="290" y="386" class="t-small">Positions: input · tool_call · reply (inline) · online · release · scheduled</text>
+  <text x="290" y="406" class="t-small">Content packs (YAML): quality · security · cost · domain patterns</text>
+
+  <!-- downstream -->
+  <text x="780" y="24" class="t-head">DOWNSTREAM · we write to</text>
+  <rect x="780" y="36" width="240" height="228" rx="8" class="b-out"/>
+  <text x="794" y="62">LangSmith feedback</text>
+  <text x="794" y="86">Langfuse / Phoenix scores</text>
+  <text x="794" y="110">App Insights events, metrics</text>
+  <text x="794" y="134">Prometheus to Grafana</text>
+  <text x="794" y="158">The client's store (Log</text>
+  <text x="794" y="176">Analytics, ClickHouse, …)</text>
+  <text x="794" y="200">Alerts: Teams, ServiceNow,</text>
+  <text x="794" y="218">Alertmanager</text>
+  <text x="794" y="250" class="t-small">ports: ResultSink, AlertSink</text>
+
+  <text x="780" y="298" class="t-head">CONTENT WE SHIP for their tools</text>
+  <rect x="780" y="310" width="240" height="118" rx="8" class="b-out"/>
+  <text x="794" y="336">Dashboard templates</text>
+  <text x="794" y="360">Alert-rule templates (KQL, PromQL)</text>
+  <text x="794" y="384">Metric definitions for the</text>
+  <text x="794" y="402">client's semantic layer</text>
+
+  <!-- called -->
+  <text x="294" y="470" class="t-head">CALLED during processing</text>
+  <rect x="270" y="482" width="750" height="62" rx="8" class="b-call"/>
+  <text x="284" y="507">Eval SDKs: Azure AI Evaluation · DeepEval · Ragas  |  Judge models: Groq (gpt-oss, Llama)</text>
+  <text x="284" y="530">Guardrails: Azure Content Safety · Presidio · LLM Guard · Llama Guard · Bedrock Guardrails (later)</text>
+
+  <!-- arrows -->
+  <path class="arrow" d="M230 134 L268 134"/>
+  <path class="arrow" d="M230 352 L268 352"/>
+  <path class="arrow" d="M740 150 L778 150"/>
+  <path class="arrow" d="M740 360 L778 360"/>
+  <path class="arrow both-ends" d="M290 196 L280 196 L280 480"/>
+</svg>
+</div>
+
+<h4>The ports</h4>
+<p>A port is an interface. The engine only knows the port; each tool sits behind an adapter that implements it, chosen by name in YAML.</p>
+<div class="tbl"><table>
+<tr><th>Port</th><th>Role</th><th>What it does</th><th>Status</th></tr>
+<tr><td><code>TraceSource</code></td><td>Upstream</td><td>Reads traces, runs or datasets and turns them into <code>EvalRequest</code> or <code>Session</code></td><td><span class="pill next">Tier 4</span></td></tr>
+<tr><td><code>InlineHook</code></td><td>Host</td><td>Lets a framework, gateway or test runner call our checks at a position</td><td><span class="pill later">Tier 7</span></td></tr>
+<tr><td><code>Evaluator</code></td><td>Called</td><td>One check: request in, result out</td><td><span class="pill done">Exists, extended in spike</span></td></tr>
+<tr><td><code>Judge</code></td><td>Called</td><td>One judge-model setting, handed to each SDK in its own shape</td><td><span class="pill done">Spike</span></td></tr>
+<tr><td><code>RuleRunner</code></td><td>Ours, reused</td><td>Runs rules over many records (SQL), from llm-cost-explainer</td><td><span class="pill next">Tier 5</span></td></tr>
+<tr><td><code>StateStore</code></td><td>Ours</td><td>Running totals for budgets, rates and repeat calls</td><td><span class="pill next">Tier 3</span></td></tr>
+<tr><td><code>Policy</code></td><td>Ours</td><td>Turns results into one action</td><td><span class="pill next">Tier 3</span></td></tr>
+<tr><td><code>ResultSink</code></td><td>Downstream</td><td>Writes results to the team's tools and store</td><td><span class="pill next">Tier 4</span></td></tr>
+<tr><td><code>AlertSink</code></td><td>Downstream</td><td>Sends alerts when a rule over results fires</td><td><span class="pill later">Tier 8</span></td></tr>
+</table></div>
+
+<h4>The data classes</h4>
+<div class="tbl"><table>
+<tr><th>Class</th><th>Holds</th><th>Status</th></tr>
+<tr><td><code>EvalRequest</code></td><td>Query, messages and tools in OpenAI format, the response with its tool calls and results, retrieved passages with source ids, the expected outcome, and metadata</td><td><span class="pill done">Exists, held up in the spike</span></td></tr>
+<tr><td><code>Result</code> (extends <code>EvalResult</code>)</td><td>Verdict, score 0–1 with 1 best, the provider's own score, threshold, reason, cost, latency, plus <code>raw</code>, <code>findings</code> and <code>dropped</code></td><td><span class="pill done">Spike</span></td></tr>
+<tr><td><code>Finding</code></td><td>Kind, confidence (how sure the provider is), severity (how bad it is, set by policy), position in the text</td><td><span class="pill done">Spike</span></td></tr>
+<tr><td><code>Scale</code></td><td>The provider's min, max, direction and threshold, so any score becomes 0–1</td><td><span class="pill done">Spike</span></td></tr>
+<tr><td><code>Session</code></td><td>The ordered turns of a conversation, tool calls with ids, decisions, outcome</td><td><span class="pill next">Tier 2</span></td></tr>
+<tr><td>Call record</td><td>One model call: model, tokens by type, cost, feature, key, environment. The rule runner's table, aligned with OTel GenAI and FOCUS billing fields.</td><td><span class="pill next">Tier 5</span> (from llm-cost-explainer)</td></tr>
+<tr><td>Finding record</td><td>Rule id plus scope, lifecycle state, first and last seen, evidence ids</td><td><span class="pill next">Tier 5</span></td></tr>
+</table></div>
+
+<!-- ================================================================== BINDING -->
+
+<h2 id="binding">Binding per stack</h2>
+<p>Binding means choosing which adapter fills each port. It's one YAML file per stack; the engine code is the same everywhere. AWS and GCP columns show the planned adapter, not built yet.</p>
+<div class="tbl"><table>
+<tr><th>Port</th><th>Open stack</th><th>Azure</th><th>AWS <span class="muted">(later)</span></th><th>GCP <span class="muted">(later)</span></th></tr>
+<tr><td>Judge</td><td>Groq <code>openai/gpt-oss-120b</code></td><td>Groq through APIM (FNOL today); Azure OpenAI or Foundry if the client pays</td><td>Bedrock models</td><td>Vertex models</td></tr>
+<tr><td>TraceSource</td><td>OTel collector; Phoenix or Langfuse API</td><td>App Insights via KQL, or the same OTel data</td><td>CloudWatch / X-Ray</td><td>Cloud Trace</td></tr>
+<tr><td>InlineHook</td><td>Pydantic AI, LangGraph, LiteLLM</td><td>Same, plus APIM content-safety headers</td><td>Same</td><td>Same</td></tr>
+<tr><td>Evaluator: quality</td><td>DeepEval, Ragas</td><td>Azure AI Evaluation SDK</td><td>Bedrock evaluations</td><td>Vertex Gen AI evaluation</td></tr>
+<tr><td>Evaluator: security</td><td>Presidio, LLM Guard, Llama Guard</td><td>Azure Content Safety, Prompt Shields</td><td>Bedrock Guardrails (<code>ApplyGuardrail</code>)</td><td>Model Armor</td></tr>
+<tr><td>Evaluator: cost, domain</td><td colspan="4">Our own rules and patterns, the same on every stack</td></tr>
+<tr><td>RuleRunner</td><td>DuckDB in-process; ClickHouse</td><td>DuckDB over data pulled from App Insights</td><td>DuckDB</td><td>DuckDB, BigQuery</td></tr>
+<tr><td>StateStore</td><td>Memory (tests), Redis</td><td>Azure Cache for Redis</td><td>ElastiCache</td><td>Memorystore</td></tr>
+<tr><td>ResultSink</td><td>OTel to Phoenix or Langfuse; Langfuse scores</td><td>Azure Monitor exporter (events, metrics)</td><td>CloudWatch</td><td>Cloud Monitoring</td></tr>
+<tr><td>AlertSink</td><td>Alertmanager, Teams or Slack webhook</td><td>Azure Monitor alert rules, Teams, ServiceNow</td><td>SNS</td><td>Cloud Monitoring alerts</td></tr>
+<tr><td>Dashboards (content)</td><td>Grafana JSON, Phoenix/Langfuse views</td><td>Workbook template</td><td>—</td><td>—</td></tr>
+<tr><td>Semantic layer (content)</td><td>Cube Core</td><td>Power BI / Fabric; Databricks Metric Views</td><td>—</td><td>—</td></tr>
+</table></div>
+<p>What a binding file will look like (shape only; exact keys settle in Tier 1):</p>
+<pre>
+# stacks/azure.yaml
+judge:        {adapter: openai_compatible, model: openai/gpt-oss-120b, via: apim}
+trace_source: app_insights
+evaluators:   [azure_groundedness, azure_content_safety, presidio_pii, deepeval_tool_correctness]
+rule_runner:  duckdb
+state_store:  azure_redis
+result_sinks: [azure_monitor, langsmith_feedback]
+alert_sinks:  [azure_monitor_alerts, teams]
+</pre>
+
+<!-- ================================================================== SUPPORT -->
+
+<h2 id="support">Supported and not supported</h2>
+<p>Every tool we've discussed, its role, how we bind to it, and where it stands. <span class="pill done">Tested</span> ran in the spike. <span class="pill next">Planned</span> has a tier. <span class="pill later">Later</span> means an adapter when a client needs it. <span class="pill no">Not supported</span> comes with a reason. <span class="verify">verify</span> marks API details from memory that the Tier 1 landscape check must confirm.</p>
+<div class="tbl"><table>
+<tr><th>Tool</th><th>Role</th><th>How we bind</th><th>Status</th></tr>
+
+<tr class="group"><td colspan="4">Traces and observability</td></tr>
+<tr><td>OpenTelemetry</td><td>Upstream and downstream</td><td>Read GenAI-convention spans from a collector; write results as spans, events and metrics</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
+<tr><td>LangSmith</td><td>Upstream and downstream</td><td>Read runs with its SDK; write <code>create_feedback</code> on the same run <span class="verify">verify</span></td><td><span class="pill later">Later · Tier 8</span></td></tr>
+<tr><td>Langfuse</td><td>Upstream and downstream</td><td>Read traces via API; write scores on the trace; datasets for release runs <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 4</span></td></tr>
+<tr><td>Arize Phoenix</td><td>Upstream, downstream, local default</td><td>OTel-native; results as span annotations <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 4</span></td></tr>
+<tr><td>App Insights / Azure Monitor</td><td>Upstream and downstream</td><td>Read with KQL (Azure Monitor Query SDK); write with the Azure Monitor OTel exporter</td><td><span class="pill later">Later · Tier 8</span></td></tr>
+<tr><td>Prometheus + Grafana</td><td>Downstream</td><td>Counts and rates as metrics; Grafana dashboard template; PromQL alert templates</td><td><span class="pill later">Later · Tier 8</span></td></tr>
+<tr><td>Braintrust, W&amp;B Weave, Datadog LLM Observability, Helicone</td><td>Would be upstream and downstream</td><td>Adapter on request; most accept OTel, which may be enough <span class="verify">verify</span></td><td><span class="pill later">Later</span></td></tr>
+
+<tr class="group"><td colspan="4">Eval SDKs (called)</td></tr>
+<tr><td>Azure AI Evaluation SDK</td><td>Called</td><td>Evaluator objects called with keyword inputs; any OpenAI-compatible judge</td><td><span class="pill done">Tested</span></td></tr>
+<tr><td>DeepEval</td><td>Called</td><td><code>LLMTestCase</code> plus metric <code>measure()</code>; state read off the metric</td><td><span class="pill done">Tested</span></td></tr>
+<tr><td>Ragas</td><td>Called</td><td><code>metrics.collections</code> API, async, with an instructor client</td><td><span class="pill done">Tested</span></td></tr>
+<tr><td>Bedrock evaluations, Vertex Gen AI evaluation</td><td>Called</td><td>One adapter each</td><td><span class="pill later">Later (AWS/GCP client)</span></td></tr>
+<tr><td>MLflow GenAI scorers, TruLens</td><td>Called</td><td>Wrap individual scorers if a client uses them</td><td><span class="pill later">Later</span></td></tr>
+
+<tr class="group"><td colspan="4">Guardrails (called)</td></tr>
+<tr><td>Presidio</td><td>Called</td><td>Analyzer per text; findings with positions; anonymizer for redaction</td><td><span class="pill done">Tested</span>, India config in Tier 6</td></tr>
+<tr><td>Azure AI Content Safety (harm, Prompt Shields, groundedness detection, protected material)</td><td>Called</td><td>REST or SDK, one adapter per capability</td><td><span class="pill next">Planned · Tier 6</span></td></tr>
+<tr><td>LLM Guard</td><td>Called</td><td>Input and output scanners</td><td><span class="pill next">Planned · Tier 6</span></td></tr>
+<tr><td>Llama Guard, Prompt Guard</td><td>Called</td><td>Open safety models on Groq <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 6</span></td></tr>
+<tr><td>AWS Bedrock Guardrails</td><td>Called</td><td><code>ApplyGuardrail</code> works on any model's text <span class="verify">verify</span></td><td><span class="pill later">Later (AWS client)</span></td></tr>
+<tr><td>Guardrails AI validators</td><td>Called</td><td>Wrap single validators, not its framework</td><td><span class="pill later">Later</span></td></tr>
+<tr><td>NeMo Guardrails</td><td>Would need to be the host</td><td>—</td><td><span class="pill no">Not supported</span> It runs its own dialogue runtime, which competes with the agent's loop instead of plugging into it.</td></tr>
+<tr><td>Lakera Guard, OpenAI moderation</td><td>Called</td><td>—</td><td><span class="pill no">Not supported</span> Paid or key-gated. An adapter only if a client already pays.</td></tr>
+
+<tr class="group"><td colspan="4">Judge models (called)</td></tr>
+<tr><td>Groq (gpt-oss-120b, gpt-oss-20b, Llama)</td><td>Called</td><td>OpenAI-compatible; one <code>Judge</code> setting, three SDK shapes</td><td><span class="pill done">Tested</span></td></tr>
+<tr><td>Azure OpenAI / Foundry, Bedrock, Vertex models</td><td>Called</td><td>Same <code>Judge</code> port</td><td><span class="pill later">Later (paying client)</span></td></tr>
+
+<tr class="group"><td colspan="4">Hosts (call us inline)</td></tr>
+<tr><td>Pydantic AI, LangGraph</td><td>Host</td><td>Framework hooks or middleware at input, tool-call and reply</td><td><span class="pill later">Later · Tier 7</span></td></tr>
+<tr><td>Claude Agent SDK, Microsoft Agent Framework</td><td>Host</td><td>Same pattern, one adapter each</td><td><span class="pill later">Later</span></td></tr>
+<tr><td>LiteLLM</td><td>Host</td><td>Custom guardrail hooks before and after the call <span class="verify">verify</span></td><td><span class="pill later">Later · Tier 7</span></td></tr>
+<tr><td>Azure APIM AI gateway</td><td>Upstream</td><td>Content-safety headers, already read by <code>Response.gateway</code></td><td><span class="pill done">Exists in agent-harness</span></td></tr>
+<tr><td>Promptfoo</td><td>Host and upstream</td><td>Custom Python assertion calls our checks; results JSON read in</td><td><span class="pill later">Later · Tier 7</span></td></tr>
+<tr><td>Inspect AI</td><td>Host and upstream</td><td>Our checks as scorers; logs read in</td><td><span class="pill later">Later</span></td></tr>
+<tr><td>GitHub Actions, Azure DevOps</td><td>Host</td><td>CLI step at the release position</td><td><span class="pill later">Later · Tier 7</span></td></tr>
+
+<tr class="group"><td colspan="4">Stores, semantic layers, conversation (theirs, not ours)</td></tr>
+<tr><td>DuckDB</td><td>Called (query engine in our process)</td><td>Runs the cost rules' SQL; not a hosted database</td><td><span class="pill done">Exists in llm-cost-explainer</span></td></tr>
+<tr><td>ClickHouse, Databricks SQL, Log Analytics</td><td>Downstream, and where rules can run</td><td>Results written in; rule SQL or KQL run where the data already is</td><td><span class="pill later">Later</span></td></tr>
+<tr><td>Cube, Databricks Metric Views, Power BI / Fabric</td><td>Content we ship</td><td>Metric definitions</td><td><span class="pill later">Later · Tier 9</span></td></tr>
+<tr><td>Genie, Fabric Copilot, AskSherlock approach</td><td>The client's conversation tool</td><td>Answers from our metric definitions</td><td><span class="pill later">Later · Tier 9</span></td></tr>
+
+<tr class="group"><td colspan="4">Other upstream data</td></tr>
+<tr><td>Provider usage exports, FOCUS billing files</td><td>Upstream</td><td>Importers from llm-cost-explainer</td><td><span class="pill done">Exists in llm-cost-explainer</span></td></tr>
+<tr><td>Stripe, deploy events, product events</td><td>Upstream</td><td>For cost rules LLM-18, 36 and 34</td><td><span class="pill later">Later · Tier 5+</span></td></tr>
+<tr><td>Teams, ServiceNow, Alertmanager, PagerDuty</td><td>Downstream (alerts)</td><td>Webhook or API per target</td><td><span class="pill later">Later · Tier 8</span></td></tr>
+
+<tr class="group"><td colspan="4">Things we deliberately don't build</td></tr>
+<tr><td>Our own database</td><td>—</td><td>—</td><td><span class="pill no">Not built</span> Results go into the client's store.</td></tr>
+<tr><td>Our own UI or dashboards</td><td>—</td><td>—</td><td><span class="pill no">Not built</span> We ship templates for Grafana, workbooks and Phoenix/Langfuse.</td></tr>
+<tr><td>Our own semantic engine or chat UI</td><td>—</td><td>—</td><td><span class="pill no">Not built</span> We ship metric definitions for theirs.</td></tr>
+<tr><td>Monkey-patching SDKs to enforce rules</td><td>—</td><td>—</td><td><span class="pill no">Not supported</span> Patches break silently when an SDK changes and can't block a stream. Instrumentation is for telemetry only.</td></tr>
+</table></div>
+
+<!-- ================================================================== PACKS -->
+
+<h2 id="packs">Content packs</h2>
+<p>A pack is configuration, not code: a set of checks or rules, ready to switch on in YAML.</p>
+<div class="grid">
+  <div class="card"><h3>Quality</h3><p>Groundedness, faithfulness, relevance, tool correctness, task completion. Taken from the eval SDKs.</p></div>
+  <div class="card"><h3>Security</h3><p>PII and secrets in output, prompt injection and jailbreak on input, harmful content, tool allow-list and argument limits, cross-customer data. From the guardrail tools plus our own tool-call checks.</p></div>
+  <div class="card"><h3>Cost</h3><p>LLM-01 to LLM-36. About 8 can run inline as guardrails, 9 per trace, and the rest over many calls. Six are built today.</p></div>
+  <div class="card"><h3>Domain patterns</h3><p><code>requires_before</code>, <code>argument_limit</code>, <code>claim_needs_action</code>, <code>decision_vs_should</code>, <code>consistency</code>, filled in with the domain's tool names and limits.</p></div>
+</div>
+
+<h4>The 36 cost rules by grain</h4>
+<div class="tbl"><table>
+<tr><th>Grain</th><th>Rules</th><th>Runs as</th></tr>
+<tr><td>One call: can block before it goes out</td><td>16 no output limit · 07 reasoning budget too high · 25 several answers, one used · 13 full-resolution images · 11 every tool definition on every call · 22 priority tier for non-urgent work · 35 test traffic on production keys · budget caps</td><td>Inline guardrail at <code>input</code></td></tr>
+<tr><td>One trace or session</td><td>15 agent loops · 14 aggressive retries · 27 retries after unparseable output · 09 full history every turn · 28 sub-agents re-sending context · 30 chain of calls that could be one · 10 over-retrieval · 17 client gave up, provider billed · 33 calls on every keystroke</td><td>Online evaluator (15 can also block at <code>tool_call</code>)</td></tr>
+<tr><td>Many calls over days</td><td>01, 02, 26 caching · 03 no response cache · 04 embeddings recomputed · 32 polling unchanged input · 12 bloated system prompt · 29 LLM doing ordinary code's job · 05 one big model for everything · 06 bulk work on real-time API · 21 idle reserved capacity · 24 old model · 08 silent model switch · 19 one user drives cost · 23 spend nobody can attribute · 31 guardrail and judge tax</td><td>Rule runner, scheduled</td></tr>
+<tr><td>Needs data beyond traces</td><td>18 customer costs more than they pay (Stripe) · 36 cost jump at a release (deploys) · 34 background AI nobody looks at (product events) · 21, 23 (billing exports)</td><td>Rule runner plus extra sources</td></tr>
+</table></div>
+<p class="muted">Built today in llm-cost-explainer: LLM-01, 06, 08, 22, 24, 26.</p>
+
+<!-- ================================================================== QUESTIONS -->
+
+<h2 id="questions">Questions it must answer</h2>
+<div class="grid">
+<div class="card">
+  <h3>Any domain (built in)</h3>
+  <ul>
+    <li>How often did each tool fail, and was it the tool or a malformed call?</li>
+    <li>How often did the context cross its limit or get truncated?</li>
+    <li>How often did a turn hit the step cap, or loop on the same tool?</li>
+    <li>How did turns end: answered, gave up, escalated, crashed?</li>
+    <li>Cost per session, per resolved case, per agent version; eval cost as a share of agent cost.</li>
+    <li>Response time per turn and per tool.</li>
+    <li>Blocks per check and position; blocks followed by the user rephrasing.</li>
+    <li>Did anything shift after a release, prompt change or model change?</li>
+    <li>How often were checks skipped or errored? How often do judges disagree?</li>
+  </ul>
+</div>
+<div class="card">
+  <h3>Domain-specific (patterns + YAML)</h3>
+  <ul>
+    <li>How many cancels happened with no order lookup before them? <span class="muted">(requires_before)</span></li>
+    <li>How many times was the refund limit crossed? <span class="muted">(argument_limit)</span></li>
+    <li>How many times did the agent promise something it didn't do? <span class="muted">(claim_needs_action)</span></li>
+    <li>Did we over-escalate or under-escalate? <span class="muted">(decision_vs_should)</span></li>
+    <li>Did the reply's facts match the tool results? <span class="muted">(consistency)</span></li>
+  </ul>
+</div>
+</div>
+
+<!-- ================================================================== WORDS -->
+
+<h2 id="words">Words used here</h2>
+<div class="tbl"><table>
+<tr><td><b>Port</b></td><td>An interface the engine depends on, such as "something that runs a check".</td></tr>
+<tr><td><b>Adapter</b></td><td>One tool's implementation of a port, such as "Presidio as a check".</td></tr>
+<tr><td><b>Binding</b></td><td>The YAML choice of which adapter fills each port, per stack.</td></tr>
+<tr><td><b>Upstream / downstream</b></td><td>Tools we read data from / tools we write results to.</td></tr>
+<tr><td><b>Host</b></td><td>A tool that calls our checks while it runs, such as an agent framework or a gateway.</td></tr>
+<tr><td><b>Called</b></td><td>A service we call during a check, such as Azure Content Safety or a judge model.</td></tr>
+<tr><td><b>Position</b></td><td>The moment a check runs: input, tool_call, reply, online, release, or scheduled.</td></tr>
+<tr><td><b>Grain</b></td><td>How much data a rule looks at: one call, one session, or many calls over days.</td></tr>
+<tr><td><b>Judge</b></td><td>A model that grades another model's output.</td></tr>
+<tr><td><b>Finding</b></td><td>One thing a check found, with where it is and how bad it is. Over time a finding is new, ongoing, resolved or regressed.</td></tr>
+<tr><td><b>Content pack</b></td><td>Ready-made checks, rules, dashboards or metric definitions, switched on in YAML.</td></tr>
+<tr><td><b>Spec / implementation</b></td><td>The Assurance Layer says what must be true; this framework checks it.</td></tr>
+</table></div>
+
+<!-- ================================================================== LOG -->
+
+<h2 id="log">Change log</h2>
+<div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Page created. Tier 0 spike done (four providers, 29 tests). Decisions T1 to T9 recorded. Architecture, binding per stack, the supported and not-supported list, content packs and the cost rules by grain added.</td></tr>
+</table></div>
+
+</main>
+</body>
+</html>
