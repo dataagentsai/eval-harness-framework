@@ -130,7 +130,7 @@ svg #ah path{fill:var(--muted)}
 
 <div class="strip" id="tiers">
   <a href="#t0"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 0</b>Spike: one shape, four providers</a>
-  <a href="#t1"><span class="pill next">Next</span> <span class="pill me">v1</span><b>Tier 1</b>Verified landscape + core package</a>
+  <a href="#t1"><span class="pill doing">In progress</span> <span class="pill me">v1</span><b>Tier 1</b>Verified landscape + core package</a>
   <a href="#t2"><span class="pill next">Planned</span> <span class="pill me">v1</span><b>Tier 2</b>Sessions + domain patterns</a>
   <a href="#t3"><span class="pill next">Planned</span> <span class="pill me">v2</span><b>Tier 3</b>Positions + the decide step</a>
   <a href="#t4"><span class="pill next">Planned</span> <span class="pill me">v1 (pull only)</span><b>Tier 4</b>OpenTelemetry in and out</a>
@@ -162,20 +162,22 @@ svg #ah path{fill:var(--muted)}
 </div>
 
 <div class="card" id="t1">
-  <div class="tierhead"><h3>Tier 1 · Verified landscape, then the core package</h3><span class="pill next">Next</span></div>
+  <div class="tierhead"><h3>Tier 1 · Verified landscape, then the core package</h3><span class="pill doing">In progress</span></div>
   <p>First, check that what this page says about other tools is still true, because these tools change monthly. Then lift the spike into a real package that the reference agent also uses, so the code exists once.</p>
   <ul class="tasks">
-    <li><span class="pill me">Claude</span><span>Landscape check with sources: LangSmith, Langfuse, Phoenix, Braintrust, Azure Foundry evaluation, Bedrock evaluations and guardrails, Promptfoo, Inspect. For each: does it already mix providers, block inline, or link checks to a spec? Every item marked <span class="verify">verify</span> on this page gets confirmed or corrected.</span></li>
-    <li><span class="pill you">You</span><span>Pick the package name (decision D1).</span></li>
-    <li><span class="pill you">You</span><span>Agree on extracting rather than copying (decision D2).</span></li>
-    <li><span class="pill me">Claude</span><span>New package in this repo with the ports, <code>EvalRequest</code>, the extended <code>Result</code>, <code>Finding</code>, <code>Scale</code> and <code>Judge</code>.</span></li>
-    <li><span class="pill me">Claude</span><span><code>agent_harness.evals</code> in reference-agent imports from the new package instead of defining its own. FNOL and clothing tests must still pass unchanged.</span></li>
-    <li><span class="pill me">Claude</span><span>Import contract: no vendor SDK imported outside its own adapter module.</span></li>
-    <li><span class="pill me">Claude</span><span>A contract test table per port that every adapter must pass.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Landscape check with sources: LangSmith, Langfuse, Phoenix, Braintrust, Azure Foundry evaluation, Bedrock evaluations and guardrails, Promptfoo, Inspect. For each: does it already mix providers, block inline, or link checks to a spec? Every item marked <span class="verify">verify</span> on this page gets confirmed or corrected.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Pick the package name (decision D1).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Agree on extracting rather than copying (decision D2).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>New package in this repo with the ports, <code>EvalRequest</code>, the extended <code>Result</code>, <code>Finding</code>, <code>Scale</code> and <code>Judge</code>.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span><code>agent_harness.evals</code> in reference-agent imports from the new package instead of defining its own. FNOL and clothing tests must still pass unchanged.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Import contract: no vendor SDK imported outside its own adapter module.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>A contract test table per port that every adapter must pass.</span></li>
     <li><span class="pill me">Claude</span><span>Packaging the OTel way: a tiny agent-side API that does nothing until configured; adapters and judges in the worker as pinned extras; a core/contrib split with an owner per adapter.</span></li>
     <li><span class="pill me">Claude</span><span>A stability label (alpha, beta, stable, deprecated) on every adapter, shown in the supported list.</span></li>
     <li><span class="pill me">Claude</span><span>Presets (for example <code>customer-support-azure</code>), so a team touches only rules, placement and consequence.</span></li>
-    <li><span class="pill me">Claude</span><span>Move the four spike adapters into an adapters package; scales and severities move into <code>evaluators.yaml</code>.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Live run of all four adapters through <code>evaluators.yaml</code>. Found: DeepEval's "deterministic" check takes about 500 ms (declared online, not inline); Presidio's first call takes about 2 s to load (inline hosts must warm it up).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>FNOL wired to the new sibling: path source, CI checkout, image build contexts. FNOL's own CI tests caught the missing checkout. Suites: reference-agent 2,093 passed with the same 2 earlier failures; FNOL 755 passed. Image build not run on the Mac; CI is its first real build.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Move the four spike adapters into an adapters package; scales and severities move into <code>evaluators.yaml</code>.</span></li>
   </ul>
 </div>
 
@@ -223,7 +225,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Result format published as semantic conventions (<code>eval.*</code> names), adopting OTel's GenAI evaluation fields where they exist (decision D12).</span></li>
     <li><span class="pill me">Claude</span><span>Tail-style sampling for online checks: errors, blocks, escalations, high cost and new prompt versions first, then a random baseline.</span></li>
     <li><span class="pill me">Claude</span><span>Agent name, version, environment and prompt version on every result.</span></li>
-    <li><span class="pill me">Claude</span><span><code>ResultSink</code> adapter: results as OTel spans, events and metrics. <span class="verify">verify</span> whether the GenAI conventions now define an evaluation-result event, and use it if so.</span></li>
+    <li><span class="pill me">Claude</span><span><code>ResultSink</code> adapter: results as OTel <code>gen_ai.evaluation.result</code> events on the judged span, plus metrics.</span></li>
     <li><span class="pill you">You</span><span>Decisions D4 (local backend) and D6 (tap or pull first).</span></li>
   </ul>
 </div>
@@ -247,8 +249,8 @@ svg #ah path{fill:var(--muted)}
   <div class="tierhead"><h3>Tier 6 · Security pack</h3><span class="pill next">Planned</span></div>
   <ul class="tasks">
     <li><span class="pill me">Claude</span><span>Presidio for India: PAN, Aadhaar and Indian phone formats; merge overlapping hits; severity per entity type in YAML; a larger spaCy model if memory allows.</span></li>
-    <li><span class="pill me">Claude</span><span>LLM Guard scanners for prompt injection and secrets.</span></li>
-    <li><span class="pill me">Claude</span><span>Llama Guard and Prompt Guard on Groq, as the free open alternative to Azure Content Safety. <span class="verify">verify</span> current Groq availability.</span></li>
+<li><span class="pill me">Claude</span><span>Replacements for what LLM Guard covered (archived Jul 2026): secrets in output, bad URLs.</span></li>
+<li><span class="pill me">Claude</span><span>Prompt Guard 2 and <code>gpt-oss-safeguard-20b</code> on Groq for demos (Groq marks both Preview); clients use Azure Content Safety or Bedrock Guardrails.</span></li>
     <li><span class="pill you">You</span><span>Access to an Azure Content Safety resource. FNOL's free tier (F0) behind APIM may be enough.</span></li>
     <li><span class="pill me">Claude</span><span>Azure Content Safety adapters: harm categories, Prompt Shields, protected material.</span></li>
     <li><span class="pill me">Claude</span><span>Tool-call checks: allow-list per customer, arguments within limits, data from one customer never reaching another.</span></li>
@@ -263,7 +265,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>LangGraph hooks.</span></li>
     <li><span class="pill me">Claude</span><span>Decorators <code>@guard.tool</code> and <code>@guard.reply</code> for agents without a framework.</span></li>
     <li><span class="pill me">Claude</span><span>Zero-code path documented: an existing OTel instrumentor plus the pull job.</span></li>
-    <li><span class="pill me">Claude</span><span>LiteLLM custom guardrail, for agents in any language. It can't see tool calls, so <code>pre_tool</code> and <code>post_tool</code> stay in the framework hook. <span class="verify">verify</span></span></li>
+<li><span class="pill me">Claude</span><span>LiteLLM custom guardrail, for agents in any language. It sees tool calls the model asks for and MCP calls routed through it, not tools the agent runs itself, so <code>pre_tool</code> and <code>post_tool</code> stay in the framework hook.</span></li>
     <li><span class="pill me">Claude</span><span>Promptfoo custom assertion that calls our checks; read Promptfoo's results JSON in.</span></li>
     <li><span class="pill me">Claude</span><span>CLI for CI (GitHub Actions, Azure DevOps): the release position, where a fail blocks the merge.</span></li>
   </ul>
@@ -272,7 +274,7 @@ svg #ah path{fill:var(--muted)}
 <div class="card" id="t8">
   <div class="tierhead"><h3>Tier 8 · Fit into tools teams already use</h3><span class="pill later">Later</span></div>
   <ul class="tasks">
-    <li><span class="pill me">Claude</span><span>LangSmith: read runs in, write results back as feedback on the same run. <span class="verify">verify</span></span></li>
+<li><span class="pill me">Claude</span><span>LangSmith: read runs in, write results back as feedback on the same run.</span></li>
     <li><span class="pill me">Claude</span><span>App Insights: read with KQL, write custom events and metrics with the Azure Monitor exporter. Uses FNOL's App Insights.</span></li>
     <li><span class="pill me">Claude</span><span>Prometheus metrics plus a Grafana dashboard template.</span></li>
     <li><span class="pill me">Claude</span><span>Rule templates: the same "score fell three days running" rule in KQL (Azure Monitor alerts) and in PromQL (Prometheus alerts).</span></li>
@@ -311,6 +313,7 @@ svg #ah path{fill:var(--muted)}
   <ul class="tasks">
     <li><span class="pill me">Claude</span><span>Docs site, three worked examples (open stack, Azure, existing LangSmith project), PyPI release.</span></li>
     <li><span class="pill both">Together</span><span>Write-up: "mix any provider's checks, honestly". The spike's findings are the story.</span></li>
+    <li><span class="pill me">Claude</span><span>Claim <code>evalharness</code> on PyPI; until then every project names its source explicitly (no unpinned lookup).</span></li>
     <li><span class="pill both">Together</span><span>Propose the eval-result gaps (scale, findings, dropped, rule identity) to the OpenTelemetry GenAI conventions group, with the spike as evidence.</span></li>
   </ul>
 </div>
@@ -321,9 +324,9 @@ svg #ah path{fill:var(--muted)}
 <p>Everything tagged <span class="pill you">You</span> above, in the order it blocks work:</p>
 <div class="tbl"><table>
 <tr><th>When</th><th>What I need</th><th>Why it blocks</th></tr>
-<tr><td>Tier 1</td><td>Decisions D1 (name) and D2 (extract)</td><td>The package can't be created without them.</td></tr>
+
 <tr><td>Tier 2</td><td>A session on the <code>Session</code> data class, then a review of the pattern YAML</td><td>You know what ops teams ask. The patterns are only useful if an ops person can write them.</td></tr>
-<tr><td>Tier 3–4</td><td>Decisions D4 (local backend), D6 (tap or pull) and D8 (streaming)</td><td>Decides what runs on the Mac.</td></tr>
+<tr><td>Tier 3–4</td><td>Decisions D6 (tap or pull) and D8 (streaming)</td><td>Decides what runs on the Mac.</td></tr>
 <tr><td>Tier 5</td><td>Priority order of the remaining 30 cost rules</td><td>We build in that order.</td></tr>
 <tr><td>Tier 6</td><td>Azure Content Safety access (FNOL's F0 may do)</td><td>Azure security checks can't be recorded without it.</td></tr>
 <tr><td>Tier 8</td><td>A free LangSmith key (optional)</td><td>Otherwise LangSmith is built from docs only and marked untested.</td></tr>
@@ -341,19 +344,20 @@ svg #ah path{fill:var(--muted)}
 <tr><td>T3</td><td>The Assurance Layer is the spec; this is the implementation</td><td>Keeps "what must be true" separate from "how we check it".</td><td>17 Oct</td></tr>
 <tr><td>T4</td><td>Security and cost checks are in scope; identity, network, secrets and billing are not</td><td>Anything that looks at what the agent does belongs here; anything that controls access to it belongs to the platform.</td><td>17 Oct</td></tr>
 <tr><td>T5</td><td>No database, UI, dashboards or semantic engine of our own; fit into existing tools and ship content for them</td><td>They already exist, and teams won't move off theirs.</td><td>17 Oct</td></tr>
-<tr><td>T6</td><td>The USP: mix providers' checks honestly (one scale, declared losses, cost per check), plus built-in rules, guardrails and patterns</td><td>Mapping alone is easy to copy; the honest mix plus the bundle isn't.</td><td>17 Oct</td></tr>
+<tr><td>T6</td><td>The USP, sharpened by the landscape check: checks traced to a spec; deterministic "owed but not done" checks over the whole trace; cost, safety and quality under one verdict that can block. Mixing providers honestly (one scale, declared losses, cost per check) supports it.</td><td>Every platform already lets you attach outside scores, so mixing alone isn't new. No product found links checks to obligations; omission checks elsewhere are LLM-judged only; nobody treats cost rules as blocking guardrails.</td><td>17 Oct</td></tr>
 <tr><td>T7</td><td>The 36 cost rules are covered; llm-cost-explainer stays its own product and is also used as a library</td><td>Its rule runner is the population engine we need.</td><td>17 Oct</td></tr>
 <tr><td>T8</td><td>Public repo, Apache-2.0</td><td>Same as your other public repos.</td><td>17 Oct</td></tr>
 <tr><td>T9</td><td>Free judge models (Groq) for our own and demo work; for clients, the judge is their own Azure OpenAI or Bedrock</td><td>Your free-models rule for personal projects; client traces sent to Groq would fail an enterprise security review.</td><td>standing</td></tr>
+<tr><td>T10</td><td>Package name <code>evalharness</code> (was D1)</td><td>One name for repo and package. Free on PyPI as of 17 Oct; to be claimed at publish.</td><td>17 Oct</td></tr>
+<tr><td>T11</td><td>Extract, don't copy: <code>agent_harness.evals</code> re-exports from <code>evalharness</code> (was D2)</td><td>One copy of the classes. Done the same day; reference-agent and FNOL suites unchanged.</td><td>17 Oct</td></tr>
+<tr><td>T12</td><td>Phoenix as the local backend (was D4)</td><td>One Python process; self-hosted Langfuse needs four services.</td><td>17 Oct</td></tr>
+<tr><td>T13</td><td>Build version 1 (the simple slice) first (was D13)</td><td>Tests whether teams find real problems before we build inline, alerts and integrations.</td><td>17 Oct</td></tr>
 </table></div>
 
 <h4>Open</h4>
 <div class="tbl"><table>
 <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
-<tr><td>D1</td><td>Package name</td><td><code>evalharness</code> (matches the repo) · <code>agentchecks</code> · <code>assurekit</code></td><td><b><code>evalharness</code></b>: one name for repo and package. Rename later if it becomes a product.</td></tr>
-<tr><td>D2</td><td>Extract or copy <code>agent_harness.evals</code>?</td><td>Extract (agent-harness depends on the new package) · Copy (two versions drift)</td><td><b>Extract.</b> One copy of the classes; FNOL and clothing tests prove nothing broke.</td></tr>
 <tr><td>D3</td><td>Where inline checks run first</td><td>Framework hooks · LiteLLM gateway</td><td><b>Framework hooks first.</b> Only they see tool calls. LiteLLM second, for non-Python agents.</td></tr>
-<tr><td>D4</td><td>Local development backend</td><td>Arize Phoenix (one Python process) · self-hosted Langfuse (needs ClickHouse, Redis, PostgreSQL and object storage) · Langfuse cloud free tier</td><td><b>Phoenix locally</b>, because self-hosted Langfuse is too heavy for this Mac's memory. Langfuse is still supported as a target for clients.</td></tr>
 <tr><td>D5</td><td>Which semantic layer to write metric definitions for first</td><td>Cube Core · Databricks Metric Views · Power BI / Fabric</td><td>Follow your earlier "by track" choice: Cube for the open track, Metric Views for Databricks clients.</td></tr>
 <tr><td>D6</td><td>How online checks get traces first</td><td>Tap (Collector sends a copy) · Pull (read from Phoenix, Langfuse, LangSmith, App Insights)</td><td><b>Pull first.</b> It works with existing projects and allows backfill. Tap second, for near real-time.</td></tr>
 <tr><td>D7</td><td>Conversation layer</td><td>MCP server over the client's semantic layer · our own chat UI</td><td><b>MCP server.</b> Any chat surface can use it, and we build no UI.</td></tr>
@@ -361,8 +365,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>D9</td><td>Do we carry the work after results land (the loop)?</td><td>Yes, all of it · Yes, scoped · No, stop at writing scores</td><td><b>Yes, scoped:</b> jobs written once against ports, a five-method adapter per tool, a short supported list, steps 1–6 first. Your instinct (carry it) is right; the scoping is what keeps the work bounded.</td></tr>
 <tr><td>D10</td><td>Run the batch rules on our own runner or as a dbt package?</td><td>llm-cost-explainer runner (DuckDB) · dbt package (dbt-duckdb locally, any dbt warehouse for clients) · both</td><td><b>Test before deciding:</b> two cost rules as a dbt package in Tier 5, compared with the existing runner on effort and reach.</td></tr>
 <tr><td>D11</td><td>Who may switch a rule off?</td><td>The agent team, any rule · The agent team, except rules the risk owner locks · Only the risk owner</td><td><b>Agent team, except locked rules.</b> Teams keep freedom over their own rules; the org keeps its minimum.</td></tr>
-<tr><td>D12</td><td>Is our result format a Python class or a published convention?</td><td>Private class only · Published <code>eval.*</code> conventions (OTel-style), with the class as one implementation</td><td><b>Published conventions.</b> Any tool can then read our results without our code; adopt OTel's GenAI evaluation fields where they exist.</td></tr>
-<tr><td>D13</td><td>Build version 1 as the simple slice first?</td><td>Version 1 slice (pull, shadow, 4 ports, a short check list) · Build tiers in order as listed</td><td><b>Version 1 slice.</b> It tests whether teams find real problems in their own data before we build inline, alerts and integrations.</td></tr>
+<tr><td>D12</td><td>Is our result format a Python class or a published convention?</td><td>Private class only · OTel's <code>gen_ai.evaluation.result</code> plus our extensions (scale, threshold, findings, rule identity), with the class as one implementation</td><td><b>Adopt OTel's event and extend it.</b> The landscape check confirmed the event exists (status Development).</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -446,7 +449,7 @@ svg #ah path{fill:var(--muted)}
   <text x="294" y="470" class="t-head">CALLED during processing</text>
   <rect x="270" y="482" width="750" height="62" rx="8" class="b-call"/>
   <text x="284" y="507">Eval SDKs: Azure AI Evaluation · DeepEval · Ragas  |  Judge models: Groq (gpt-oss, Llama)</text>
-  <text x="284" y="530">Guardrails: Azure Content Safety · Presidio · LLM Guard · Llama Guard · Bedrock Guardrails (later)</text>
+  <text x="284" y="530">Guardrails: Azure Content Safety · Presidio · Prompt Guard 2 · Bedrock Guardrails (later)</text>
 
   <!-- arrows -->
   <path class="arrow" d="M230 134 L268 134"/>
@@ -529,10 +532,10 @@ svg #ah path{fill:var(--muted)}
 <tr><th>Check (provider)</th><th>pre_model</th><th>post_model</th><th>pre_tool</th><th>post_tool</th><th>reply</th><th>│ online turn</th><th>online session</th><th>release</th><th>scheduled</th></tr>
 <tr class="group"><td colspan="10">Security: open source</td></tr>
 <tr><td>Presidio PII detect and redact</td><td>✔ redact before the model provider sees it</td><td></td><td></td><td>✔ data from backends</td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
-<tr><td>LLM Guard input scanners (injection, secrets, token limit) <span class="verify">verify</span></td><td>✔</td><td></td><td></td><td>✔ injection in tool output</td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
-<tr><td>LLM Guard output scanners (sensitive data, bad URLs, relevance) <span class="verify">verify</span></td><td></td><td>✔</td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
-<tr><td>Prompt Guard (on Groq) <span class="verify">verify</span></td><td>✔</td><td></td><td></td><td>✔ indirect injection</td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
-<tr><td>Llama Guard (on Groq)</td><td>○ user harm</td><td></td><td></td><td></td><td>○ reply harm</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td><s>LLM Guard input scanners</s> (archived Jul 2026)</td><td colspan="9" class="muted">Not supported. Prompt Guard 2 and Azure Prompt Shields cover injection; secrets detection needs a replacement (open item).</td></tr>
+<tr><td><s>LLM Guard output scanners</s> (archived)</td><td colspan="9" class="muted">Not supported. Presidio and Azure cover sensitive data; bad-URL checks need a replacement (open item).</td></tr>
+<tr><td>Prompt Guard 2 (on Groq, preview)</td><td>✔</td><td></td><td></td><td>✔ indirect injection</td><td></td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>gpt-oss-safeguard-20b (on Groq, preview)</td><td>○ user harm</td><td></td><td></td><td></td><td>○ reply harm</td><td>✔</td><td></td><td>✔</td><td></td></tr>
 <tr><td>Guardrails AI validators (schema, format, competitor names)</td><td></td><td>✔ schema</td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
 <tr class="group"><td colspan="10">Security: cloud</td></tr>
 <tr><td>Azure Content Safety: harm categories</td><td>✔</td><td></td><td></td><td></td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
@@ -577,8 +580,8 @@ svg #ah path{fill:var(--muted)}
 <tr><td>4</td><td>Run cost rules on a schedule</td><td>No</td><td><b>Ours</b> (llm-cost-explainer)</td><td>Tier 5</td></tr>
 <tr><td>5</td><td>Write results back as their native scores, so their screens show them</td><td>They accept scores</td><td><b>Ours</b>: one adapter method</td><td>Tier 4</td></tr>
 <tr><td>6</td><td>Group repeats into findings (new, ongoing, resolved, regressed)</td><td>No</td><td><b>Ours</b></td><td>Tier 5</td></tr>
-<tr><td>7</td><td>Alert on trends and regressions</td><td>App Insights and Grafana alert well; LangSmith partly <span class="verify">verify</span></td><td><b>Templates</b> for their alerting</td><td>Tier 8</td></tr>
-<tr><td>8</td><td>Send doubtful or failing cases to a human review queue</td><td>LangSmith and Langfuse have annotation queues <span class="verify">verify</span></td><td><b>Theirs</b>; we push items in</td><td>Tier 8</td></tr>
+<tr><td>7</td><td>Alert on trends and regressions</td><td>App Insights, Grafana, LangSmith and Langfuse all alert</td><td><b>Templates</b> for their alerting</td><td>Tier 8</td></tr>
+<tr><td>8</td><td>Send doubtful or failing cases to a human review queue</td><td>LangSmith and Langfuse have annotation queues</td><td><b>Theirs</b>; we push items in</td><td>Tier 8</td></tr>
 <tr><td>9</td><td>Read human labels back as ground truth; measure how often the judge agrees</td><td>Labels are stored by them</td><td><b>Ours</b></td><td>Tier 8</td></tr>
 <tr><td>10</td><td>Confirmed failures become golden test cases for the release gate</td><td>Both have datasets</td><td><b>Theirs</b> to store; we add the items</td><td>Tier 8</td></tr>
 <tr><td>11</td><td>Weekly report per agent: top findings, cost, trends</td><td>No</td><td><b>Ours</b>, as a template</td><td>Tier 8</td></tr>
@@ -692,7 +695,7 @@ rules:
 <tr><th>#</th><th>What OTel does</th><th>What we take from it</th></tr>
 <tr><td>1</td><td>A tiny API, separate from the SDK; the API does nothing until an SDK is installed</td><td>Our agent-side hook package is the “API”: tiny, no vendor dependencies, does nothing until configured. Adapters and judges are the “SDK”, in the eval worker.</td></tr>
 <tr><td>2</td><td>Never break the app</td><td>Watching fails open by default; blocking rules state their choice explicitly (fail-closed for PII, refund limits).</td></tr>
-<tr><td>3</td><td><b>Semantic conventions:</b> agree on names, not code</td><td><b>The biggest lesson.</b> Publish our result format as conventions (<code>eval.rule.id</code>, <code>eval.verdict</code>, <code>eval.score</code>, <code>eval.finding.kind</code>), not a private class, so any tool can read results without our code. Adopt OTel's GenAI evaluation fields if they exist and extend only the gaps. <span class="verify">verify</span></td></tr>
+<tr><td>3</td><td><b>Semantic conventions:</b> agree on names, not code</td><td><b>The biggest lesson.</b> Publish our result format as conventions (<code>eval.rule.id</code>, <code>eval.verdict</code>, <code>eval.score</code>, <code>eval.finding.kind</code>), not a private class, so any tool can read results without our code. OTel's <code>gen_ai.evaluation.result</code> exists: adopt it and extend only the gaps.</td></tr>
 <tr><td>4</td><td>The Collector pipeline: receivers, processors, exporters, wired in YAML</td><td>Same shape for us: sources, checks and decide, sinks, wired in YAML. Borrow the vocabulary.</td></tr>
 <tr><td>5</td><td>Core versus contrib, each contrib component with named owners</td><td>A small core we maintain; adapters in contrib, each with an owner (a vendor or client can own theirs).</td></tr>
 <tr><td>6</td><td>Stability levels per component</td><td>Each adapter labelled alpha, beta, stable or deprecated.</td></tr>
@@ -707,7 +710,7 @@ rules:
 <h2 id="standard">Why there's no open standard for eval, and what we do</h2>
 <div class="tbl"><table>
 <tr><th>Layer</th><th>Standard</th><th>Covers our need?</th></tr>
-<tr><td>Traces (the input)</td><td>OTel GenAI conventions (experimental); OpenInference</td><td>Partly. It may include an evaluation-result event <span class="verify">verify</span>, but no scale, findings or rule identity.</td></tr>
+<tr><td>Traces (the input)</td><td>OTel GenAI conventions (experimental); OpenInference</td><td>Partly. It defines <code>gen_ai.evaluation.result</code> (name, score value, score label, explanation, response id), status Development; no scale, threshold, findings or rule identity. The conventions moved to <code>open-telemetry/semantic-conventions-genai</code> in May 2026 and have no release yet.</td></tr>
 <tr><td>Model benchmarks</td><td>MLCommons AILuminate, Stanford HELM, Inspect logs</td><td>No. These score models, not your agent in production.</td></tr>
 <tr><td>Management and process</td><td>NIST AI RMF, ISO/IEC 42001, EU AI Act</td><td>No. They say you must evaluate, not in what format.</td></tr>
 <tr><td><b>Application eval results and rules</b></td><td><b>Nothing</b></td><td>The gap: what a check returned, on what scale, by which judge, under which rule.</td></tr>
@@ -767,7 +770,7 @@ rules:
 <tr><td>TraceSource</td><td>OTel collector; Phoenix or Langfuse API</td><td>App Insights via KQL, or the same OTel data</td><td>CloudWatch / X-Ray</td><td>Cloud Trace</td></tr>
 <tr><td>InlineHook</td><td>Pydantic AI, LangGraph, LiteLLM</td><td>Same, plus APIM content-safety headers</td><td>Same</td><td>Same</td></tr>
 <tr><td>Evaluator: quality</td><td>DeepEval, Ragas</td><td>Azure AI Evaluation SDK</td><td>Bedrock evaluations</td><td>Vertex Gen AI evaluation</td></tr>
-<tr><td>Evaluator: security</td><td>Presidio, LLM Guard, Llama Guard</td><td>Azure Content Safety, Prompt Shields</td><td>Bedrock Guardrails (<code>ApplyGuardrail</code>)</td><td>Model Armor</td></tr>
+<tr><td>Evaluator: security</td><td>Presidio, Prompt Guard 2, gpt-oss-safeguard (demo only)</td><td>Azure Content Safety, Prompt Shields</td><td>Bedrock Guardrails (<code>ApplyGuardrail</code>)</td><td>Model Armor</td></tr>
 <tr><td>Evaluator: cost, domain</td><td colspan="4">Our own rules and patterns, the same on every stack</td></tr>
 <tr><td>RuleRunner</td><td>DuckDB in-process; ClickHouse</td><td>DuckDB over data pulled from App Insights</td><td>DuckDB</td><td>DuckDB, BigQuery</td></tr>
 <tr><td>StateStore</td><td>Memory (tests), Redis</td><td>Azure Cache for Redis</td><td>ElastiCache</td><td>Memorystore</td></tr>
@@ -798,11 +801,11 @@ alert_sinks:  [azure_monitor_alerts, teams]
 <tr class="group"><td colspan="4">Traces and observability</td></tr>
 <tr><td>OpenTelemetry</td><td>Upstream and downstream</td><td>Read GenAI-convention spans from a collector; write results as spans, events and metrics</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
 <tr><td>OpenTelemetry Collector</td><td>Upstream (tap)</td><td>Sends a copy of traces to our eval worker; no eval logic runs inside it</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
-<tr><td>LangSmith</td><td>Upstream and downstream</td><td>Read runs with its SDK; write <code>create_feedback</code> on the same run <span class="verify">verify</span></td><td><span class="pill later">Later · Tier 8</span></td></tr>
-<tr><td>Langfuse</td><td>Upstream and downstream</td><td>Read traces via API; write scores on the trace; datasets for release runs <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 4</span></td></tr>
-<tr><td>Arize Phoenix</td><td>Upstream, downstream, local default</td><td>OTel-native; results as span annotations <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 4</span></td></tr>
+<tr><td>LangSmith</td><td>Upstream and downstream</td><td>Read with <code>Client.list_runs</code>; write <code>Client.create_feedback(run_id, key, score, comment)</code> on the same run. Has annotation queues, datasets, online evaluators, alerts, and an OTLP endpoint.</td><td><span class="pill later">Later · Tier 8</span></td></tr>
+<tr><td>Langfuse</td><td>Upstream and downstream</td><td>Read traces via API; write <code>create_score</code>. Now at v4 (GA Aug 2026; v3 security-only to Jan 2027). Has annotation queues, datasets, judge evaluators and alerts ("Monitors"). Self-hosting needs Postgres, Redis, ClickHouse and object storage.</td><td><span class="pill later">Later · v3</span></td></tr>
+<tr><td>Arize Phoenix</td><td>Upstream, downstream, local default (D4)</td><td><code>pip install arize-phoenix</code>, <code>phoenix serve</code>; OTLP on 6006 (HTTP) and 4317 (gRPC); SQLite by default (set <code>PHOENIX_WORKING_DIR</code> to keep data). Results via <code>client.spans.add_span_annotation</code> or <code>log_span_annotations</code>.</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
 <tr><td>App Insights / Azure Monitor</td><td>Upstream and downstream</td><td>Read with KQL (Azure Monitor Query SDK); write with the Azure Monitor OTel exporter</td><td><span class="pill later">Later · Tier 8</span></td></tr>
-<tr><td>Prometheus + Grafana</td><td>Downstream</td><td>Counts and rates as metrics; Grafana dashboard template; PromQL alert templates</td><td><span class="pill later">Later · Tier 8</span></td></tr>
+<tr><td>Prometheus + Grafana</td><td>Downstream</td><td>Counts and rates as metrics. Prometheus 3 takes OTLP metrics only with <code>--web.enable-otlp-receiver</code> (endpoint <code>/api/v1/otlp/v1/metrics</code>). Grafana dashboard and PromQL alert templates.</td><td><span class="pill later">Later · v3</span></td></tr>
 <tr><td>Braintrust, W&amp;B Weave, Datadog LLM Observability, Helicone</td><td>Would be upstream and downstream</td><td>Adapter on request; most accept OTel, which may be enough <span class="verify">verify</span></td><td><span class="pill later">Later</span></td></tr>
 
 <tr class="group"><td colspan="4">Eval SDKs (called)</td></tr>
@@ -814,10 +817,10 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <tr class="group"><td colspan="4">Guardrails (called)</td></tr>
 <tr><td>Presidio</td><td>Called</td><td>Analyzer per text; findings with positions; anonymizer for redaction</td><td><span class="pill done">Tested</span>, India config in Tier 6</td></tr>
-<tr><td>Azure AI Content Safety (harm, Prompt Shields, groundedness detection, protected material)</td><td>Called</td><td>REST or SDK, one adapter per capability</td><td><span class="pill next">Planned · Tier 6</span></td></tr>
-<tr><td>LLM Guard</td><td>Called</td><td>Input and output scanners</td><td><span class="pill next">Planned · Tier 6</span></td></tr>
-<tr><td>Llama Guard, Prompt Guard</td><td>Called</td><td>Open safety models on Groq <span class="verify">verify</span></td><td><span class="pill next">Planned · Tier 6</span></td></tr>
-<tr><td>AWS Bedrock Guardrails</td><td>Called</td><td><code>ApplyGuardrail</code> works on any model's text <span class="verify">verify</span></td><td><span class="pill later">Later (AWS client)</span></td></tr>
+<tr><td>Azure AI Content Safety (harm, Prompt Shields, protected material, groundedness detection, Task Adherence)</td><td>Called</td><td>REST or SDK, one adapter per capability. Prompt Shields checks the user prompt and up to 5 documents. Groundedness detection is preview and not in the free F0 tier.</td><td><span class="pill next">Planned · Tier 6</span></td></tr>
+<tr><td>LLM Guard</td><td>Called</td><td>—</td><td><span class="pill no">Not supported</span> Archived 8 Jul 2026; code and models unmaintained.</td></tr>
+<tr><td>Groq safety models: <code>gpt-oss-safeguard-20b</code>, Prompt Guard 2 (22m, 86m)</td><td>Called</td><td>Open safety models on Groq, all marked Preview (not for production) by Groq. Llama Guard 4 was shut down on 5 Mar 2026.</td><td><span class="pill next">Planned · Tier 6</span> for demos; clients use Azure or Bedrock</td></tr>
+<tr><td>AWS Bedrock Guardrails</td><td>Called</td><td><code>ApplyGuardrail</code> (source <code>INPUT</code> or <code>OUTPUT</code>) checks any text against a configured guardrail without a model call; needs an AWS account, billed.</td><td><span class="pill later">Later (AWS client)</span></td></tr>
 <tr><td>Guardrails AI validators</td><td>Called</td><td>Wrap single validators, not its framework</td><td><span class="pill later">Later</span></td></tr>
 <tr><td>NeMo Guardrails</td><td>Would need to be the host</td><td>—</td><td><span class="pill no">Not supported</span> It runs its own dialogue runtime, which competes with the agent's loop instead of plugging into it.</td></tr>
 <tr><td>Lakera Guard, OpenAI moderation</td><td>Called</td><td>—</td><td><span class="pill no">Not supported</span> Paid or key-gated. An adapter only if a client already pays.</td></tr>
@@ -830,9 +833,9 @@ alert_sinks:  [azure_monitor_alerts, teams]
 <tr><td>OpenInference, OpenLLMetry (OTel instrumentors)</td><td>Upstream (zero-code watching)</td><td>Adopted as-is; we never write our own patches</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
 <tr><td>Pydantic AI, LangGraph</td><td>Host</td><td>Framework hooks or middleware at all five inline positions</td><td><span class="pill later">Later · Tier 7</span></td></tr>
 <tr><td>Claude Agent SDK, Microsoft Agent Framework</td><td>Host</td><td>Same pattern, one adapter each</td><td><span class="pill later">Later</span></td></tr>
-<tr><td>LiteLLM</td><td>Host</td><td>Custom guardrail hooks before and after the call <span class="verify">verify</span></td><td><span class="pill later">Later · Tier 7</span></td></tr>
+<tr><td>LiteLLM</td><td>Host</td><td>Custom guardrail hooks: <code>async_pre_call_hook</code>, <code>async_moderation_hook</code>, <code>async_post_call_success_hook</code>, or one <code>apply_guardrail</code>. Sees model-requested tool calls and MCP calls routed through it; not tools the agent runs itself.</td><td><span class="pill later">Later · Tier 7</span></td></tr>
 <tr><td>Azure APIM AI gateway</td><td>Upstream</td><td>Content-safety headers, already read by <code>Response.gateway</code></td><td><span class="pill done">Exists in agent-harness</span></td></tr>
-<tr><td>Promptfoo</td><td>Host and upstream</td><td>Custom Python assertion calls our checks; results JSON read in</td><td><span class="pill later">Later · Tier 7</span></td></tr>
+<tr><td>Promptfoo</td><td>Host and upstream</td><td><code>type: python</code> assertion (<code>get_assert</code>) calls our checks; <code>promptfoo eval -o results.json</code> read in. <b>Owned by OpenAI since Mar 2026</b>: fine as an optional host, never a required part.</td><td><span class="pill later">Later · Tier 7</span></td></tr>
 <tr><td>Inspect AI</td><td>Host and upstream</td><td>Our checks as scorers; logs read in</td><td><span class="pill later">Later</span></td></tr>
 <tr><td>GitHub Actions, Azure DevOps</td><td>Host</td><td>CLI step at the release position</td><td><span class="pill later">Later · Tier 7</span></td></tr>
 
@@ -930,6 +933,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Tier 1 mostly done: <code>evalharness</code> 0.1.0 (core, four adapters, YAML config, 75 tests, mypy strict), extracted from and re-exported by agent-harness, FNOL wired. Landscape check applied: LLM Guard archived (dropped), Llama Guard gone from Groq (replaced), OTel <code>gen_ai.evaluation.result</code> exists (D12), Langfuse v4 with alerts, Promptfoo owned by OpenAI, Prometheus OTLP flag, LiteLLM sees MCP calls. USP sharpened (T6). D1, D2, D4, D13 taken (T10 to T13).</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Keep it simple: version 1" at the top, version tags on every tier, decision D13.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Why there's no open standard for eval, and what we do": adopt, propose upstream to OTel, own spec only if blocked.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Lessons from OpenTelemetry" (11 lessons, what not to copy) and decision D12; tasks added to Tiers 1 and 4.</td></tr>
