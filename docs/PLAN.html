@@ -1,32 +1,16 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Eval Harness Plan</title>
 <style>
 :root{
-  --bg:#f7f7f5; --card:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#e3e3df;
+  --bg:#ffffff; --card:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#e3e3df;
   --accent:#0f6cbd; --done:#1a7f37; --doing:#b26a00; --next:#0f6cbd; --later:#8250df; --no:#a8071a;
   --done-bg:#e8f5ec; --doing-bg:#fff4e0; --next-bg:#e7f0fb; --later-bg:#f3ecfd; --no-bg:#fdecee;
   --you:#8a4b00; --you-bg:#fdf1dc; --code:#f0f0ec;
   --box-in:#e7f0fb; --box-core:#e8f5ec; --box-out:#f3ecfd; --box-call:#fff4e0;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#141518; --card:#1d1f23; --ink:#e8e8ea; --muted:#a0a4ab; --line:#2e3137;
-    --accent:#5aa7ff; --done:#4cc76a; --doing:#f0a640; --next:#5aa7ff; --later:#b48cff; --no:#ff7a85;
-    --done-bg:#16301f; --doing-bg:#3a2a10; --next-bg:#14263d; --later-bg:#2a1f3d; --no-bg:#3a161b;
-    --you:#f3b45c; --you-bg:#3a2a10; --code:#26282d;
-    --box-in:#14263d; --box-core:#16301f; --box-out:#2a1f3d; --box-call:#3a2a10;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#141518; --card:#1d1f23; --ink:#e8e8ea; --muted:#a0a4ab; --line:#2e3137;
-  --accent:#5aa7ff; --done:#4cc76a; --doing:#f0a640; --next:#5aa7ff; --later:#b48cff; --no:#ff7a85;
-  --done-bg:#16301f; --doing-bg:#3a2a10; --next-bg:#14263d; --later-bg:#2a1f3d; --no-bg:#3a161b;
-  --you:#f3b45c; --you-bg:#3a2a10; --code:#26282d;
-  --box-in:#14263d; --box-core:#16301f; --box-out:#2a1f3d; --box-call:#3a2a10;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
@@ -599,6 +583,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>White background; the page no longer follows dark mode.</td></tr>
 <tr><td>17 Oct 2026</td><td>Page created. Tier 0 spike done (four providers, 29 tests). Decisions T1 to T9 recorded. Architecture, binding per stack, the supported and not-supported list, content packs and the cost rules by grain added.</td></tr>
 </table></div>
 
