@@ -1,0 +1,22 @@
+# The four providers from the spike, configured. Copy and edit; startup refuses
+# an unknown adapter or field. Keys are never here: `api_key_env` names the
+# variable. For a client, point `judge` at the client's own model endpoint.
+judge:
+  model: openai/gpt-oss-120b
+  base_url: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  input_per_mtok: 0.15     # approximate, recorded 2026-09-01; verify before quoting
+  output_per_mtok: 0.75
+
+evaluators:
+  groundedness:
+    adapter: azure_groundedness
+    scale: {raw_min: 1, raw_max: 5, higher_is_better: true, threshold: 3}
+  faithfulness:
+    adapter: ragas_faithfulness
+    scale: {raw_min: 0, raw_max: 1, higher_is_better: true, threshold: 0.7}
+  tools_called:
+    adapter: deepeval_tool_correctness
+  pii:
+    adapter: presidio_pii
+    severity: {URL: 0.2, DATE_TIME: 0.1}

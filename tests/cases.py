@@ -1,9 +1,31 @@
-"""The requests every adapter is run on: one shape, four providers."""
+"""The requests every adapter is run on: one shape, four providers.
+
+The core only describes tool calls and results (`ToolCallLike`, `ToolResultLike`);
+a host brings its own. These two dataclasses are the tests' host.
+"""
 
 from __future__ import annotations
 
-from agent_harness.contracts import ToolCall, ToolResult
-from agent_harness.evals import EvalRequest, Expected, Meta, Passage, Response
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+
+from evalharness import EvalRequest, Expected, Meta, Passage, Response
+
+
+@dataclass(frozen=True)
+class Call:
+    id: str
+    name: str
+    arguments: Mapping[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Result:
+    name: str
+    structured: object = None
+    text: str = ""
+    is_error: bool = False
+
 
 POLICY = (
     Passage("policy-7.2", "Windscreen damage is covered up to ₹15,000 with no excess."),
@@ -11,9 +33,9 @@ POLICY = (
 )
 META = Meta(agent="claims-fnol", version="spike", position="online")
 
-GET_CLAIM = ToolCall(id="c1", name="get_claim", arguments={"id": "CLM-010003"})
-PAYOUT = ToolCall(id="c2", name="issue_payout", arguments={"id": "CLM-010003"})
-CLAIM = ToolResult(name="get_claim", structured={"id": "CLM-010003", "status": "approved"})
+GET_CLAIM = Call("c1", "get_claim", {"id": "CLM-010003"})
+PAYOUT = Call("c2", "issue_payout", {"id": "CLM-010003"})
+CLAIM = Result("get_claim", {"id": "CLM-010003", "status": "approved"})
 
 CASES: dict[str, EvalRequest] = {
     "grounded": EvalRequest(

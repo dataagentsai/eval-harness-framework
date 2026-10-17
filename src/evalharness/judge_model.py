@@ -2,8 +2,12 @@
 
 Every LLM-judged check needs a model, and every SDK asks for it differently:
 Azure takes a TypedDict, DeepEval a model object, Ragas an `instructor` client.
-The judge is one setting in the stack profile; this module is the only place
-that knows the three shapes.
+The judge is one setting in `evaluators.yaml`; this module is the only place
+that knows the three shapes. Each SDK is imported only inside its method, so
+choosing a judge installs nothing.
+
+For a client, the judge is the client's own model endpoint (Azure OpenAI,
+Bedrock); a free hosted model such as Groq is for our own and demo work.
 """
 
 from __future__ import annotations
@@ -12,18 +16,23 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-GROQ = "https://api.groq.com/openai/v1"
-
 
 @dataclass(frozen=True)
-class Judge:
+class JudgeModel:
     model: str
     base_url: str
-    api_key: str
+    api_key_env: str
+    """The environment variable holding the key: the key itself is never in YAML."""
+    input_per_mtok: float = 0.0
+    output_per_mtok: float = 0.0
+    """USD per million tokens; 0 where unknown, and the cost then reads 0."""
 
-    @classmethod
-    def from_env(cls, model: str = "openai/gpt-oss-120b") -> Judge:
-        return cls(model, os.environ.get("GROQ_BASE_URL", GROQ), os.environ["GROQ_API_KEY"])
+    @property
+    def api_key(self) -> str:
+        return os.environ[self.api_key_env]
+
+    def cost(self, input_tokens: int, output_tokens: int) -> float:
+        return (input_tokens * self.input_per_mtok + output_tokens * self.output_per_mtok) / 1e6
 
     def for_azure(self) -> dict[str, Any]:
         from azure.ai.evaluation import OpenAIModelConfiguration
