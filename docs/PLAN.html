@@ -91,6 +91,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#after">After results land</a>
   <a href="#dash">Dashboards</a>
   <a href="#convo">Conversation</a>
+  <a href="#dbt">dbt analogy</a>
   <a href="#adoption">Adoption</a>
   <a href="#binding">Binding per stack</a>
   <a href="#support">Supported / not supported</a>
@@ -205,6 +206,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Trace-level cost rules: LLM-15, 14, 27, 09, 28, 30, 10, 17, 33.</span></li>
     <li><span class="pill me">Claude</span><span>Finding lifecycle for every pack: new, ongoing, resolved, regressed, snoozed, accepted.</span></li>
     <li><span class="pill me">Claude</span><span>LLM-31 ("guardrail and judge tax") runs on our own checks' cost.</span></li>
+    <li><span class="pill me">Claude</span><span>Decision D10 trial: two cost rules as a dbt package on <code>dbt-duckdb</code>, compared with the llm-cost-explainer runner.</span></li>
     <li><span class="pill you">You</span><span>Order of the remaining 30 rules: which matter first for your clients?</span></li>
   </ul>
 </div>
@@ -321,6 +323,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>D7</td><td>Conversation layer</td><td>MCP server over the client's semantic layer · our own chat UI</td><td><b>MCP server.</b> Any chat surface can use it, and we build no UI.</td></tr>
 <tr><td>D8</td><td>Check replies while they stream?</td><td>Yes, check per sentence while streaming · No, check the full reply before sending</td><td><b>No for now.</b> FNOL and clothing don't stream to the customer. Revisit when an agent does.</td></tr>
 <tr><td>D9</td><td>Do we carry the work after results land (the loop)?</td><td>Yes, all of it · Yes, scoped · No, stop at writing scores</td><td><b>Yes, scoped:</b> jobs written once against ports, a five-method adapter per tool, a short supported list, steps 1–6 first. Your instinct (carry it) is right; the scoping is what keeps the work bounded.</td></tr>
+<tr><td>D10</td><td>Run the batch rules on our own runner or as a dbt package?</td><td>llm-cost-explainer runner (DuckDB) · dbt package (dbt-duckdb locally, any dbt warehouse for clients) · both</td><td><b>Test before deciding:</b> two cost rules as a dbt package in Tier 5, compared with the existing runner on effort and reach.</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -582,6 +585,30 @@ svg #ah path{fill:var(--muted)}
   <li>Our parts: the metric definitions (content) and the MCP server. Everything else is the client's.</li>
 </ul>
 
+<h2 id="dbt">The dbt analogy</h2>
+<p>dbt is the closest model for what we're building, and it points to a possible reuse.</p>
+<div class="tbl"><table>
+<tr><th>dbt</th><th>Our framework</th></tr>
+<tr><td>One adapter per warehouse</td><td>One adapter per provider or tool</td></tr>
+<tr><td><code>profiles.yml</code> picks the warehouse</td><td>The stack binding YAML picks the adapters</td></tr>
+<tr><td>Generic tests in YAML: <code>not_null</code>, <code>unique</code>, <code>accepted_values</code>, <code>relationships</code></td><td>Domain patterns in YAML: <code>requires_before</code>, <code>argument_limit</code>, <code>claim_needs_action</code></td></tr>
+<tr><td>Custom tests in SQL</td><td>Custom rules</td></tr>
+<tr><td>Packages: dbt-utils, dbt-expectations</td><td>Content packs: cost, security, quality</td></tr>
+<tr><td>Severity <code>warn</code> / <code>error</code>, <code>warn_if</code> / <code>error_if</code></td><td>Shadow, alert, block</td></tr>
+<tr><td>Runs inside your warehouse, stores nothing of its own</td><td>Writes into your LangSmith, App Insights, Langfuse</td></tr>
+<tr><td><code>dbt test</code> in CI</td><td>The release gate</td></tr>
+<tr><td>dbt Semantic Layer (MetricFlow)</td><td>Metric definitions for the conversation layer</td></tr>
+<tr><td>Elementary (anomaly tests, alerts, reports on top of dbt)</td><td>The "after results land" loop</td></tr>
+</table></div>
+<p><b>Where it breaks, which is also what makes us more than "dbt for evals":</b></p>
+<ul>
+  <li><b>Inline.</b> dbt only runs in batches over stored data. We also run inside the request, in milliseconds, and can block.</li>
+  <li><b>Judgement.</b> A dbt test is exact. Many of our checks are a judge model's opinion, so they need precision measurement, human labels and calibration.</li>
+  <li><b>Many shapes.</b> dbt only speaks SQL tables. We map messages, tool calls, traces and scores across many tools.</li>
+</ul>
+<p><b>Lessons:</b> the basic test must be as easy to write as <code>not_null</code>; run where the data is; it creates a role (our rule writers, the way dbt created the analytics engineer); community packages beat core features.</p>
+<p><b>Possible reuse (decision D10):</b> the batch cost rules are SQL over call records, which is exactly what dbt runs. Shipping them as a dbt package would give every warehouse dbt supports for free (<code>dbt-duckdb</code> locally; Databricks, Snowflake, ClickHouse, BigQuery for clients), with Elementary for alerts. Limits: no dbt adapter for Log Analytics (KQL), and it adds dbt as a dependency.</p>
+
 <h2 id="adoption">Adoption: why teams will resist, and our answer</h2>
 <p>Some of this resistance is fair. Most of the answers become design rules, listed in the tiers below the table.</p>
 <div class="tbl"><table>
@@ -787,6 +814,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added "The dbt analogy", with where it breaks and decision D10 (batch rules as a dbt package?).</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Adoption": 13 reasons teams resist and our answers, the adoption path, measures and a kill signal; answers turned into tasks in Tiers 1, 3, 8 and 10. T9 corrected: client judges are the client's own models.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "After results land: the loop" (11 steps, who does each, built once via a five-method adapter per tool) and decision D9.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added: who writes rules; the five inline moments (now matching the harness, replacing input/tool_call); where online runs (tap or pull); where every check fits; dashboard ownership; conversation design (MCP server). Open decisions D6 to D8.</td></tr>
