@@ -96,7 +96,8 @@ The Azure judge cost about $0.0005 per call, priced from the harness's own table
 
 ```bash
 uv venv --python 3.12 .venv && source .venv/bin/activate
-uv pip install --no-deps -e ~/reference-agent/packages/agent-harness   # the hub classes
+# the hub classes, from the reference agent at the commit the spike ran against
+uv pip install --no-deps "agent-harness @ git+https://github.com/dataagentsai/reference-agent@fe77def#subdirectory=packages/agent-harness"
 uv pip install -r requirements-spike.txt
 python -m pytest tests          # offline, against recorded answers
 GROQ_API_KEY=... python -m spike.record   # live, re-records spike/fixtures/
