@@ -93,6 +93,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#convo">Conversation</a>
   <a href="#attach">Attaching and switching</a>
   <a href="#dbt">dbt analogy</a>
+  <a href="#otel">OTel lessons</a>
   <a href="#adoption">Adoption</a>
   <a href="#binding">Binding per stack</a>
   <a href="#support">Supported / not supported</a>
@@ -146,7 +147,8 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span><code>agent_harness.evals</code> in reference-agent imports from the new package instead of defining its own. FNOL and clothing tests must still pass unchanged.</span></li>
     <li><span class="pill me">Claude</span><span>Import contract: no vendor SDK imported outside its own adapter module.</span></li>
     <li><span class="pill me">Claude</span><span>A contract test table per port that every adapter must pass.</span></li>
-    <li><span class="pill me">Claude</span><span>Packaging for adoption: a tiny hook package for agents with no vendor dependencies; adapters as pinned extras.</span></li>
+    <li><span class="pill me">Claude</span><span>Packaging the OTel way: a tiny agent-side API that does nothing until configured; adapters and judges in the worker as pinned extras; a core/contrib split with an owner per adapter.</span></li>
+    <li><span class="pill me">Claude</span><span>A stability label (alpha, beta, stable, deprecated) on every adapter, shown in the supported list.</span></li>
     <li><span class="pill me">Claude</span><span>Presets (for example <code>customer-support-azure</code>), so a team touches only rules, placement and consequence.</span></li>
     <li><span class="pill me">Claude</span><span>Move the four spike adapters into an adapters package; scales and severities move into <code>evaluators.yaml</code>.</span></li>
   </ul>
@@ -193,6 +195,9 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Pull: read from Phoenix or Langfuse on a schedule, with backfill (re-run new rules on old traces).</span></li>
     <li><span class="pill me">Claude</span><span>Skip rules already judged inline; run session rules when a session closes.</span></li>
     <li><span class="pill me">Claude</span><span>The day-1 report: run the packs over the last 30 days of a team's traces, with no code change on their side.</span></li>
+    <li><span class="pill me">Claude</span><span>Result format published as semantic conventions (<code>eval.*</code> names), adopting OTel's GenAI evaluation fields where they exist (decision D12).</span></li>
+    <li><span class="pill me">Claude</span><span>Tail-style sampling for online checks: errors, blocks, escalations, high cost and new prompt versions first, then a random baseline.</span></li>
+    <li><span class="pill me">Claude</span><span>Agent name, version, environment and prompt version on every result.</span></li>
     <li><span class="pill me">Claude</span><span><code>ResultSink</code> adapter: results as OTel spans, events and metrics. <span class="verify">verify</span> whether the GenAI conventions now define an evaluation-result event, and use it if so.</span></li>
     <li><span class="pill you">You</span><span>Decisions D4 (local backend) and D6 (tap or pull first).</span></li>
   </ul>
@@ -330,6 +335,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>D9</td><td>Do we carry the work after results land (the loop)?</td><td>Yes, all of it · Yes, scoped · No, stop at writing scores</td><td><b>Yes, scoped:</b> jobs written once against ports, a five-method adapter per tool, a short supported list, steps 1–6 first. Your instinct (carry it) is right; the scoping is what keeps the work bounded.</td></tr>
 <tr><td>D10</td><td>Run the batch rules on our own runner or as a dbt package?</td><td>llm-cost-explainer runner (DuckDB) · dbt package (dbt-duckdb locally, any dbt warehouse for clients) · both</td><td><b>Test before deciding:</b> two cost rules as a dbt package in Tier 5, compared with the existing runner on effort and reach.</td></tr>
 <tr><td>D11</td><td>Who may switch a rule off?</td><td>The agent team, any rule · The agent team, except rules the risk owner locks · Only the risk owner</td><td><b>Agent team, except locked rules.</b> Teams keep freedom over their own rules; the org keeps its minimum.</td></tr>
+<tr><td>D12</td><td>Is our result format a Python class or a published convention?</td><td>Private class only · Published <code>eval.*</code> conventions (OTel-style), with the class as one implementation</td><td><b>Published conventions.</b> Any tool can then read our results without our code; adopt OTel's GenAI evaluation fields where they exist.</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -653,6 +659,24 @@ rules:
 <p><b>Lessons:</b> the basic test must be as easy to write as <code>not_null</code>; run where the data is; it creates a role (our rule writers, the way dbt created the analytics engineer); community packages beat core features.</p>
 <p><b>Possible reuse (decision D10):</b> the batch cost rules are SQL over call records, which is exactly what dbt runs. Shipping them as a dbt package would give every warehouse dbt supports for free (<code>dbt-duckdb</code> locally; Databricks, Snowflake, ClickHouse, BigQuery for clients), with Elementary for alerts. Limits: no dbt adapter for Log Analytics (KQL), and it adds dbt as a dependency.</p>
 
+<h2 id="otel">Lessons from OpenTelemetry</h2>
+<p>OTel won by being the thing every vendor plugs into. That's the position we want for eval.</p>
+<div class="tbl"><table>
+<tr><th>#</th><th>What OTel does</th><th>What we take from it</th></tr>
+<tr><td>1</td><td>A tiny API, separate from the SDK; the API does nothing until an SDK is installed</td><td>Our agent-side hook package is the “API”: tiny, no vendor dependencies, does nothing until configured. Adapters and judges are the “SDK”, in the eval worker.</td></tr>
+<tr><td>2</td><td>Never break the app</td><td>Watching fails open by default; blocking rules state their choice explicitly (fail-closed for PII, refund limits).</td></tr>
+<tr><td>3</td><td><b>Semantic conventions:</b> agree on names, not code</td><td><b>The biggest lesson.</b> Publish our result format as conventions (<code>eval.rule.id</code>, <code>eval.verdict</code>, <code>eval.score</code>, <code>eval.finding.kind</code>), not a private class, so any tool can read results without our code. Adopt OTel's GenAI evaluation fields if they exist and extend only the gaps. <span class="verify">verify</span></td></tr>
+<tr><td>4</td><td>The Collector pipeline: receivers, processors, exporters, wired in YAML</td><td>Same shape for us: sources, checks and decide, sinks, wired in YAML. Borrow the vocabulary.</td></tr>
+<tr><td>5</td><td>Core versus contrib, each contrib component with named owners</td><td>A small core we maintain; adapters in contrib, each with an owner (a vendor or client can own theirs).</td></tr>
+<tr><td>6</td><td>Stability levels per component</td><td>Each adapter labelled alpha, beta, stable or deprecated.</td></tr>
+<tr><td>7</td><td>Context propagation (trace id across services)</td><td>Inline results ride on the trace id, so online knows what was judged; session id and agent version travel the same way.</td></tr>
+<tr><td>8</td><td>Tail sampling: decide after seeing the whole trace</td><td><b>Judge interesting sessions first:</b> errors, blocks, escalations, high cost, new prompt versions; then a small random baseline.</td></tr>
+<tr><td>9</td><td>Resource attributes (service, environment, version) on everything</td><td>Agent name, version, environment and prompt version on every result; LLM-35 and LLM-36 depend on it.</td></tr>
+<tr><td>10</td><td>Separate signals: traces, metrics, logs</td><td>Results as events on the trace, counts as metrics, findings as their own records.</td></tr>
+<tr><td>11</td><td>Neutral governance made vendors contribute</td><td>Apache-2.0, open conventions and contrib ownership, so providers can write adapters.</td></tr>
+</table></div>
+<p><b>Not to copy:</b> OTel's complexity, its most common complaint. Hence presets: OTel's design underneath, simple on the surface. <b>Warning:</b> the GenAI conventions are still experimental; we pin a version and the trace adapter translates.</p>
+
 <h2 id="adoption">Adoption: why teams will resist, and our answer</h2>
 <p>Some of this resistance is fair. Most of the answers become design rules, listed in the tiers below the table.</p>
 <div class="tbl"><table>
@@ -859,6 +883,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added "Lessons from OpenTelemetry" (11 lessons, what not to copy) and decision D12; tasks added to Tiers 1 and 4.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Attaching to an agent, and turning checks on and off": four ways to attach (instrumentor, gateway, framework hook, decorators), no blocking monkey patches, three config layers with locked rules; decision D11.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "The dbt analogy", with where it breaks and decision D10 (batch rules as a dbt package?).</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Adoption": 13 reasons teams resist and our answers, the adoption path, measures and a kill signal; answers turned into tasks in Tiers 1, 3, 8 and 10. T9 corrected: client judges are the client's own models.</td></tr>
