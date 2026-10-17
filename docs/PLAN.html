@@ -91,6 +91,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#after">After results land</a>
   <a href="#dash">Dashboards</a>
   <a href="#convo">Conversation</a>
+  <a href="#adoption">Adoption</a>
   <a href="#binding">Binding per stack</a>
   <a href="#support">Supported / not supported</a>
   <a href="#packs">Content packs</a>
@@ -143,6 +144,8 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span><code>agent_harness.evals</code> in reference-agent imports from the new package instead of defining its own. FNOL and clothing tests must still pass unchanged.</span></li>
     <li><span class="pill me">Claude</span><span>Import contract: no vendor SDK imported outside its own adapter module.</span></li>
     <li><span class="pill me">Claude</span><span>A contract test table per port that every adapter must pass.</span></li>
+    <li><span class="pill me">Claude</span><span>Packaging for adoption: a tiny hook package for agents with no vendor dependencies; adapters as pinned extras.</span></li>
+    <li><span class="pill me">Claude</span><span>Presets (for example <code>customer-support-azure</code>), so a team touches only rules, placement and consequence.</span></li>
     <li><span class="pill me">Claude</span><span>Move the four spike adapters into an adapters package; scales and severities move into <code>evaluators.yaml</code>.</span></li>
   </ul>
 </div>
@@ -169,6 +172,8 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Run any adapter, ours or a provider's, at any of the five positions, with a time budget per position.</span></li>
     <li><span class="pill me">Claude</span><span><code>Policy</code> port: results become one action (allow, redact, block, escalate, alert, fail the release).</span></li>
     <li><span class="pill me">Claude</span><span>Fail-open or fail-closed set per position in YAML.</span></li>
+    <li><span class="pill me">Claude</span><span>Rule modes: shadow, then alert, then block. A rule moves up only with measured precision and an owner.</span></li>
+    <li><span class="pill me">Claude</span><span>Every block carries rule id, version, reason and triggering text; a “why” command replays one trace.</span></li>
     <li><span class="pill me">Claude</span><span><code>StateStore</code> port for running totals (budgets, rate counts, repeat calls). In-memory for tests, Redis for production.</span></li>
     <li><span class="pill me">Claude</span><span>Inline results written onto the trace with rule id and version, so online doesn't judge them twice.</span></li>
     <li><span class="pill me">Claude</span><span>Redaction applies the positions from Presidio's findings.</span></li>
@@ -184,6 +189,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Tap: an OTLP receiver in the eval worker; a Collector config that sends it a copy.</span></li>
     <li><span class="pill me">Claude</span><span>Pull: read from Phoenix or Langfuse on a schedule, with backfill (re-run new rules on old traces).</span></li>
     <li><span class="pill me">Claude</span><span>Skip rules already judged inline; run session rules when a session closes.</span></li>
+    <li><span class="pill me">Claude</span><span>The day-1 report: run the packs over the last 30 days of a team's traces, with no code change on their side.</span></li>
     <li><span class="pill me">Claude</span><span><code>ResultSink</code> adapter: results as OTel spans, events and metrics. <span class="verify">verify</span> whether the GenAI conventions now define an evaluation-result event, and use it if so.</span></li>
     <li><span class="pill you">You</span><span>Decisions D4 (local backend) and D6 (tap or pull first).</span></li>
   </ul>
@@ -237,6 +243,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Alert sinks: Teams webhook, ServiceNow.</span></li>
     <li><span class="pill me">Claude</span><span>The loop's later steps: push to review queues, read human labels, judge agreement, failures into golden datasets, weekly report template.</span></li>
     <li><span class="pill me">Claude</span><span>One shared eval worker deployment per environment; onboarding an agent is YAML only.</span></li>
+    <li><span class="pill me">Claude</span><span>Governance pack: data flow per adapter, redaction before judges, local-only mode, a pre-written security review.</span></li>
     <li><span class="pill you">You</span><span>A free LangSmith account and key, if you want this tested against the real service.</span></li>
   </ul>
 </div>
@@ -258,6 +265,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Pick an open-source LangGraph agent and add the framework with only YAML and one hook adapter.</span></li>
     <li><span class="pill me">Claude</span><span>Show one rule (for example a refund limit) running in four places: before deploy, at the framework hook, at the gateway, and over traces. This is the Assurance Layer's planned one-week spike.</span></li>
     <li><span class="pill you">You</span><span>Judge it: would a team adopt this without us in the room?</span></li>
+    <li><span class="pill you">You</span><span>Find a pilot team for four weeks of shadow mode; the kill signal applies.</span></li>
   </ul>
 </div>
 
@@ -298,7 +306,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>T6</td><td>The USP: mix providers' checks honestly (one scale, declared losses, cost per check), plus built-in rules, guardrails and patterns</td><td>Mapping alone is easy to copy; the honest mix plus the bundle isn't.</td><td>17 Oct</td></tr>
 <tr><td>T7</td><td>The 36 cost rules are covered; llm-cost-explainer stays its own product and is also used as a library</td><td>Its rule runner is the population engine we need.</td><td>17 Oct</td></tr>
 <tr><td>T8</td><td>Public repo, Apache-2.0</td><td>Same as your other public repos.</td><td>17 Oct</td></tr>
-<tr><td>T9</td><td>Free judge models (Groq) by default; paid APIs only when a client already pays for them</td><td>Your standing rule for personal projects.</td><td>standing</td></tr>
+<tr><td>T9</td><td>Free judge models (Groq) for our own and demo work; for clients, the judge is their own Azure OpenAI or Bedrock</td><td>Your free-models rule for personal projects; client traces sent to Groq would fail an enterprise security review.</td><td>standing</td></tr>
 </table></div>
 
 <h4>Open</h4>
@@ -574,6 +582,39 @@ svg #ah path{fill:var(--muted)}
   <li>Our parts: the metric definitions (content) and the MCP server. Everything else is the client's.</li>
 </ul>
 
+<h2 id="adoption">Adoption: why teams will resist, and our answer</h2>
+<p>Some of this resistance is fair. Most of the answers become design rules, listed in the tiers below the table.</p>
+<div class="tbl"><table>
+<tr><th>#</th><th>Resistance</th><th>Who feels it</th><th>Our answer</th></tr>
+<tr><td>1</td><td>“We already have LangSmith or Foundry evals. Why another layer?”</td><td>Agent developers</td><td><b>Complement, don't replace.</b> Their evaluators run as adapters, results stay in their tool, nothing to migrate. A team happy on one vendor end to end isn't our user; mixed and multi-stack teams are.</td></tr>
+<tr><td>2</td><td>False alarms kill trust in a week (the spike's Presidio called a claim id a US driver's licence)</td><td>Developers, ops</td><td><b>Every rule starts in shadow mode</b> (log only), moves to alert and then block only after human labels show it's precise. Alerts fire per grouped finding, not per event.</td></tr>
+<tr><td>3</td><td>“It'll slow our replies or block real customers”</td><td>Developers, product</td><td>Time budget per inline position, checked at startup; fail-open or fail-closed per rule; inline latency reported.</td></tr>
+<tr><td>4</td><td>Too many concepts (nine ports, nine moments, packs, bindings)</td><td>Developers</td><td><b>Presets.</b> <code>preset: customer-support-azure</code> sets everything; a team touches only the rule, where it runs and what happens. Ports are for adapter writers.</td></tr>
+<tr><td>5</td><td>Dependency mess (Ragas broke on import in our own spike)</td><td>Developers</td><td>The agent gets a tiny hook package with no vendor dependencies. Heavy SDKs and judges run in the eval worker. Adapters are pinned extras with recorded fixtures.</td></tr>
+<tr><td>6</td><td>“Why was this blocked?” is hard to debug</td><td>Developers, support</td><td>Every block carries rule id, version, reason, the exact triggering text and a rule-doc link; a “why” command replays one trace.</td></tr>
+<tr><td>7</td><td>Another service to run and be on call for</td><td>Platform team</td><td>Start with nothing to run: a scheduled pull job, even in CI. The always-on worker comes after value is shown.</td></tr>
+<tr><td>8</td><td>Data governance: traces sent to judges, a new component to review</td><td>Security, compliance</td><td>Governance pack: data flow per adapter, redaction before any judge, local-only mode. <b>For clients the judge is their own Azure OpenAI or Bedrock</b>; Groq stays for our own and demo work.</td></tr>
+<tr><td>9</td><td>Judge cost</td><td>Managers, FinOps</td><td>Eval budget with sampling; LLM-31 run on ourselves: eval cost against what it caught.</td></tr>
+<tr><td>10</td><td>Nobody owns the rules, so alerts get ignored</td><td>Everyone</td><td>Every rule has an owner field; a rule with no owner can't leave shadow mode; a responsibility template per agent.</td></tr>
+<tr><td>11</td><td>“Evals don't ship features”: no value until an incident</td><td>Managers</td><td><b>Prove value on their past data first:</b> run the packs over the last 30 days of traces and hand over a report with counts and avoidable cost.</td></tr>
+<tr><td>12</td><td>Lock-in to a small outside project</td><td>Architects</td><td>Apache-2.0, results in their tools in OTel format, rules in plain YAML. Leaving costs nothing, and we say so.</td></tr>
+<tr><td>13</td><td>An enterprise standard mandates one vendor</td><td>Enterprise architecture</td><td>Work as an add-on to the mandated tool (Foundry, App Insights), never a competitor.</td></tr>
+</table></div>
+<h4>The adoption path</h4>
+<ol>
+  <li><b>Day 1, no code change:</b> read their existing traces, run the packs over the last 30 days, deliver the report. Results appear in the tool they already use.</li>
+  <li><b>Weeks 1–4, shadow mode:</b> online checks run, nothing blocks, humans label a sample to measure each rule's precision.</li>
+  <li><b>Then, rule by rule:</b> precise rules move up to alerts; only the highest-stakes (refund limit, PII) move up to blocking inline.</li>
+</ol>
+<h4>How we'll know</h4>
+<ul>
+  <li>Time to first useful finding under one day.</li>
+  <li>False-alarm rate per rule, from human labels.</li>
+  <li>Share of rules with an owner.</li>
+  <li>Inline latency added; eval cost as a share of agent cost.</li>
+  <li><b>Kill signal:</b> a pilot team switches it off after four weeks of shadow mode. Then the problem is the product, not the team.</li>
+</ul>
+
 <!-- ================================================================== BINDING -->
 
 <h2 id="binding">Binding per stack</h2>
@@ -746,6 +787,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added "Adoption": 13 reasons teams resist and our answers, the adoption path, measures and a kill signal; answers turned into tasks in Tiers 1, 3, 8 and 10. T9 corrected: client judges are the client's own models.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "After results land: the loop" (11 steps, who does each, built once via a five-method adapter per tool) and decision D9.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added: who writes rules; the five inline moments (now matching the harness, replacing input/tool_call); where online runs (tap or pull); where every check fits; dashboard ownership; conversation design (MCP server). Open decisions D6 to D8.</td></tr>
 <tr><td>17 Oct 2026</td><td>White background; the page no longer follows dark mode.</td></tr>
