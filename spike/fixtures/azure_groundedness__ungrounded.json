@@ -1,0 +1,18 @@
+{
+  "groundedness": 2.0,
+  "groundedness_score": 2.0,
+  "groundedness_passed": false,
+  "groundedness_result": "fail",
+  "groundedness_reason": "Let's think step by step: The query asks if the windscreen claim is approved. The context confirms that claim CLM-010003 was approved on 12 Oct for ₹12,400 and that coverage is up to ₹15,000. The response does answer the query by saying the claim is approved, but it states an approval amount of ₹40,000, which contradicts the context (the approved amount is ₹12,400 and exceeds the coverage limit). Therefore the response contains incorrect information not supported by the context. This matches the definition of Groundedness level 2.",
+  "groundedness_status": "completed",
+  "groundedness_threshold": 3,
+  "groundedness_properties": {
+    "prompt_tokens": 1515,
+    "completion_tokens": 340,
+    "total_tokens": 1855,
+    "finish_reason": "stop",
+    "model": "openai/gpt-oss-120b",
+    "sample_input": "[{\"role\": \"user\", \"content\": \"{\\\"query\\\": \\\"Is my windscreen claim approved?\\\", \\\"response\\\": \\\"Yes, approved for \\\\u20b940,000, and your premium will not rise.\\\", \\\"context\\\": \\\"Windscreen damage is covered up to \\\\u20b915,000 with no excess.\\\\n\\\\nClaim CLM-010003 was approved on 12 Oct for \\\\u20b912,400.\\\"}\"}]",
+    "sample_output": "[{\"role\": \"assistant\", \"content\": \"{\\\"reason\\\":\\\"Let's think step by step: The query asks if the windscreen claim is approved. The context confirms that claim CLM-010003 was approved on 12 Oct for \\u20b912,400 and that coverage is up to \\u20b915,000. The response does answer the query by saying the claim is approved, but it states an approval amount of \\u20b940,000, which contradicts the context (the approved amount is \\u20b912,400 and exceeds the coverage limit). Therefore the response contains incorrect information not supported by the context. This matches the definition of Groundedness level 2.\\\",\\\"score\\\":2,\\\"status\\\":\\\"completed\\\"}\"}]"
+  }
+}

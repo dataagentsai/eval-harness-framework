@@ -1,0 +1,59 @@
+{
+  "entities": [
+    {
+      "entity_type": "EMAIL_ADDRESS",
+      "start": 73,
+      "end": 97,
+      "score": 1.0,
+      "analysis_explanation": null,
+      "recognition_metadata": {
+        "recognizer_name": "EmailRecognizer",
+        "recognizer_identifier": "EmailRecognizer_5879423072"
+      }
+    },
+    {
+      "entity_type": "DATE_TIME",
+      "start": 49,
+      "end": 60,
+      "score": 0.85,
+      "analysis_explanation": null,
+      "recognition_metadata": {
+        "recognizer_name": "SpacyRecognizer",
+        "recognizer_identifier": "SpacyRecognizer_5901226480"
+      }
+    },
+    {
+      "entity_type": "PHONE_NUMBER",
+      "start": 45,
+      "end": 60,
+      "score": 0.75,
+      "analysis_explanation": null,
+      "recognition_metadata": {
+        "recognizer_name": "PhoneRecognizer",
+        "recognizer_identifier": "PhoneRecognizer_5878887104"
+      }
+    },
+    {
+      "entity_type": "URL",
+      "start": 73,
+      "end": 81,
+      "score": 0.5,
+      "analysis_explanation": null,
+      "recognition_metadata": {
+        "recognizer_name": "UrlRecognizer",
+        "recognizer_identifier": "UrlRecognizer_5889809280"
+      }
+    },
+    {
+      "entity_type": "URL",
+      "start": 86,
+      "end": 97,
+      "score": 0.5,
+      "analysis_explanation": null,
+      "recognition_metadata": {
+        "recognizer_name": "UrlRecognizer",
+        "recognizer_identifier": "UrlRecognizer_5889809280"
+      }
+    }
+  ]
+}

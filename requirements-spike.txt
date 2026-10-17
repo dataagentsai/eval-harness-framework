@@ -1,0 +1,10 @@
+azure-ai-evaluation==1.18.9
+deepeval==4.3.1
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+langchain-community==0.4.1
+presidio-analyzer==2.2.364
+presidio-anonymizer==2.2.364
+pydantic==2.14.1
+pytest==9.1.1
+pyyaml==6.0.3
+ragas==0.4.3

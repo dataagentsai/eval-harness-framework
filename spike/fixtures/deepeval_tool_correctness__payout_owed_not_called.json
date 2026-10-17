@@ -1,0 +1,12 @@
+{
+  "score": 0.5,
+  "reason": "[\n\t Tool Calling Reason: Incomplete tool usage: missing tools [ToolCall(\n    name=\"get_claim\",\n    type=\"FUNCTION\"\n), ToolCall(\n    name=\"issue_payout\",\n    type=\"FUNCTION\"\n)]; expected ['get_claim', 'issue_payout'], called ['get_claim']. See more details above.\n\t Tool Selection Reason: No available tools were provided to assess tool selection criteria\n]\n",
+  "success": false,
+  "tools_called": [
+    "get_claim"
+  ],
+  "expected_tools": [
+    "get_claim",
+    "issue_payout"
+  ]
+}

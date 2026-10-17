@@ -1,0 +1,15 @@
+{
+  "entities": [
+    {
+      "entity_type": "US_DRIVER_LICENSE",
+      "start": 9,
+      "end": 15,
+      "score": 0.01,
+      "analysis_explanation": null,
+      "recognition_metadata": {
+        "recognizer_name": "UsLicenseRecognizer",
+        "recognizer_identifier": "UsLicenseRecognizer_5905060816"
+      }
+    }
+  ]
+}
