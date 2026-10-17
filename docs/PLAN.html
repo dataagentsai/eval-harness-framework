@@ -94,6 +94,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#attach">Attaching and switching</a>
   <a href="#dbt">dbt analogy</a>
   <a href="#otel">OTel lessons</a>
+  <a href="#standard">No eval standard</a>
   <a href="#adoption">Adoption</a>
   <a href="#binding">Binding per stack</a>
   <a href="#support">Supported / not supported</a>
@@ -286,6 +287,7 @@ svg #ah path{fill:var(--muted)}
   <ul class="tasks">
     <li><span class="pill me">Claude</span><span>Docs site, three worked examples (open stack, Azure, existing LangSmith project), PyPI release.</span></li>
     <li><span class="pill both">Together</span><span>Write-up: "mix any provider's checks, honestly". The spike's findings are the story.</span></li>
+    <li><span class="pill both">Together</span><span>Propose the eval-result gaps (scale, findings, dropped, rule identity) to the OpenTelemetry GenAI conventions group, with the spike as evidence.</span></li>
   </ul>
 </div>
 
@@ -677,6 +679,26 @@ rules:
 </table></div>
 <p><b>Not to copy:</b> OTel's complexity, its most common complaint. Hence presets: OTel's design underneath, simple on the surface. <b>Warning:</b> the GenAI conventions are still experimental; we pin a version and the trace adapter translates.</p>
 
+<h2 id="standard">Why there's no open standard for eval, and what we do</h2>
+<div class="tbl"><table>
+<tr><th>Layer</th><th>Standard</th><th>Covers our need?</th></tr>
+<tr><td>Traces (the input)</td><td>OTel GenAI conventions (experimental); OpenInference</td><td>Partly. It may include an evaluation-result event <span class="verify">verify</span>, but no scale, findings or rule identity.</td></tr>
+<tr><td>Model benchmarks</td><td>MLCommons AILuminate, Stanford HELM, Inspect logs</td><td>No. These score models, not your agent in production.</td></tr>
+<tr><td>Management and process</td><td>NIST AI RMF, ISO/IEC 42001, EU AI Act</td><td>No. They say you must evaluate, not in what format.</td></tr>
+<tr><td><b>Application eval results and rules</b></td><td><b>Nothing</b></td><td>The gap: what a check returned, on what scale, by which judge, under which rule.</td></tr>
+</table></div>
+<p><b>Why nobody has standardised it:</b></p>
+<ol>
+  <li><b>Eval is where vendors make money.</b> A common format makes switching easy. OTel became a standard once tracing vendors moved their differentiation up into analysis; eval vendors haven't yet.</li>
+  <li><b>The field changes every few months</b> (RAG answers, then tool-using agents, then multi-agent). Standardise too early and you freeze the wrong thing.</li>
+  <li><b>Scores aren't comparable without context.</b> Azure's 3 out of 5 and Ragas's 0.6 mean nothing side by side without the scale, threshold, judge model and prompt.</li>
+  <li><b>Judges aren't repeatable,</b> so a result must record the judge's model and prompt version.</li>
+  <li><b>Nobody owns it.</b> OTel had CNCF; application eval sits between ML researchers and software engineers.</li>
+  <li><b>The input isn't stable yet:</b> the trace conventions are still experimental.</li>
+</ol>
+<p><b>What can be standardised now:</b> not the algorithms, but the envelope around a result, which the spike produced: rule id and version, verdict, score with raw value, scale and threshold, judge model and prompt version, cost, latency, findings with positions, what was dropped, position, finding lifecycle. Declarative patterns such as <code>requires_before</code> too.</p>
+<p><b>What we do:</b> don't invent a sixteenth standard. (1) Adopt OTel's GenAI evaluation fields if they exist. (2) Propose the gaps upstream to OpenTelemetry, with the spike as evidence. (3) Only if that's blocked, write it as a spec in the Clean AI Engineering family beside AAC and AHC. See decision D12.</p>
+
 <h2 id="adoption">Adoption: why teams will resist, and our answer</h2>
 <p>Some of this resistance is fair. Most of the answers become design rules, listed in the tiers below the table.</p>
 <div class="tbl"><table>
@@ -883,6 +905,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added "Why there's no open standard for eval, and what we do": adopt, propose upstream to OTel, own spec only if blocked.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Lessons from OpenTelemetry" (11 lessons, what not to copy) and decision D12; tasks added to Tiers 1 and 4.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Attaching to an agent, and turning checks on and off": four ways to attach (instrumentor, gateway, framework hook, decorators), no blocking monkey patches, three config layers with locked rules; decision D11.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "The dbt analogy", with where it breaks and decision D10 (batch rules as a dbt package?).</td></tr>
