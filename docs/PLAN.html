@@ -91,6 +91,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#after">After results land</a>
   <a href="#dash">Dashboards</a>
   <a href="#convo">Conversation</a>
+  <a href="#attach">Attaching and switching</a>
   <a href="#dbt">dbt analogy</a>
   <a href="#adoption">Adoption</a>
   <a href="#binding">Binding per stack</a>
@@ -173,7 +174,8 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Run any adapter, ours or a provider's, at any of the five positions, with a time budget per position.</span></li>
     <li><span class="pill me">Claude</span><span><code>Policy</code> port: results become one action (allow, redact, block, escalate, alert, fail the release).</span></li>
     <li><span class="pill me">Claude</span><span>Fail-open or fail-closed set per position in YAML.</span></li>
-    <li><span class="pill me">Claude</span><span>Rule modes: shadow, then alert, then block. A rule moves up only with measured precision and an owner.</span></li>
+    <li><span class="pill me">Claude</span><span>Rule modes: off, shadow, alert, block. A rule moves up only with measured precision and an owner.</span></li>
+    <li><span class="pill me">Claude</span><span>Three config layers (preset, org policy, agent YAML); <code>locked</code> rules the agent team can't switch off; every switch audited; runtime switch without redeploy.</span></li>
     <li><span class="pill me">Claude</span><span>Every block carries rule id, version, reason and triggering text; a “why” command replays one trace.</span></li>
     <li><span class="pill me">Claude</span><span><code>StateStore</code> port for running totals (budgets, rate counts, repeat calls). In-memory for tests, Redis for production.</span></li>
     <li><span class="pill me">Claude</span><span>Inline results written onto the trace with rule id and version, so online doesn't judge them twice.</span></li>
@@ -226,8 +228,11 @@ svg #ah path{fill:var(--muted)}
 <div class="card" id="t7">
   <div class="tierhead"><h3>Tier 7 · Host adapters: where inline checks run</h3><span class="pill later">Later</span></div>
   <ul class="tasks">
+    <li><span class="pill me">Claude</span><span><code>with_guards(agent, preset=…)</code>: one line for a framework agent.</span></li>
     <li><span class="pill me">Claude</span><span>Pydantic AI hooks (FNOL already uses it).</span></li>
     <li><span class="pill me">Claude</span><span>LangGraph hooks.</span></li>
+    <li><span class="pill me">Claude</span><span>Decorators <code>@guard.tool</code> and <code>@guard.reply</code> for agents without a framework.</span></li>
+    <li><span class="pill me">Claude</span><span>Zero-code path documented: an existing OTel instrumentor plus the pull job.</span></li>
     <li><span class="pill me">Claude</span><span>LiteLLM custom guardrail, for agents in any language. It can't see tool calls, so <code>pre_tool</code> and <code>post_tool</code> stay in the framework hook. <span class="verify">verify</span></span></li>
     <li><span class="pill me">Claude</span><span>Promptfoo custom assertion that calls our checks; read Promptfoo's results JSON in.</span></li>
     <li><span class="pill me">Claude</span><span>CLI for CI (GitHub Actions, Azure DevOps): the release position, where a fail blocks the merge.</span></li>
@@ -324,6 +329,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>D8</td><td>Check replies while they stream?</td><td>Yes, check per sentence while streaming · No, check the full reply before sending</td><td><b>No for now.</b> FNOL and clothing don't stream to the customer. Revisit when an agent does.</td></tr>
 <tr><td>D9</td><td>Do we carry the work after results land (the loop)?</td><td>Yes, all of it · Yes, scoped · No, stop at writing scores</td><td><b>Yes, scoped:</b> jobs written once against ports, a five-method adapter per tool, a short supported list, steps 1–6 first. Your instinct (carry it) is right; the scoping is what keeps the work bounded.</td></tr>
 <tr><td>D10</td><td>Run the batch rules on our own runner or as a dbt package?</td><td>llm-cost-explainer runner (DuckDB) · dbt package (dbt-duckdb locally, any dbt warehouse for clients) · both</td><td><b>Test before deciding:</b> two cost rules as a dbt package in Tier 5, compared with the existing runner on effort and reach.</td></tr>
+<tr><td>D11</td><td>Who may switch a rule off?</td><td>The agent team, any rule · The agent team, except rules the risk owner locks · Only the risk owner</td><td><b>Agent team, except locked rules.</b> Teams keep freedom over their own rules; the org keeps its minimum.</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -585,6 +591,44 @@ svg #ah path{fill:var(--muted)}
   <li>Our parts: the metric definitions (content) and the MCP server. Everything else is the client's.</li>
 </ul>
 
+<h2 id="attach">Attaching to an agent, and turning checks on and off</h2>
+<p>A developer can start with almost no code. Monkey patching is used only for <i>watching</i>, never for <i>blocking</i>.</p>
+<div class="tbl"><table>
+<tr><th>Way</th><th>Developer work</th><th>What it covers</th><th>Verdict</th></tr>
+<tr><td><b>1. Auto-instrumentation</b> (existing OTel instrumentors such as OpenInference, OpenLLMetry)</td><td>Zero to one line</td><td>Watching only: online, release and scheduled checks, the day-1 report</td><td><span class="pill done">Pursue</span> Adopt theirs; we never write our own patches.</td></tr>
+<tr><td><b>2. Gateway</b> (LiteLLM, APIM)</td><td>Zero code: change the model <code>base_url</code></td><td><code>pre_model</code> and <code>post_model</code> only; a gateway can't see tool calls</td><td><span class="pill done">Pursue</span> For teams who won't touch code</td></tr>
+<tr><td><b>3. Framework hooks</b> (Pydantic AI, LangGraph, OpenAI Agents SDK, Claude Agent SDK)</td><td>One line: <code>with_guards(agent, preset=…)</code></td><td>All five inline moments</td><td><span class="pill done">Pursue</span> The main path</td></tr>
+<tr><td><b>4. Decorators</b></td><td>One line per function: <code>@guard.tool("issue_refund")</code>, <code>@guard.reply</code></td><td>All five moments, for agents without a framework</td><td><span class="pill done">Pursue</span> For custom code</td></tr>
+<tr><td>Our own monkey patches that block</td><td>—</td><td>—</td><td><span class="pill no">Not supported</span> A patch fails silently on an SDK update, so the guard disappears without an error. It can't see business meaning, struggles with streaming and async, and fails security reviews.</td></tr>
+</table></div>
+<pre>
+# with a framework: one line
+agent = with_guards(agent, preset="customer-support-azure")
+
+# without a framework: decorators on your own functions (an SDK upgrade can't remove them)
+@guard.tool("issue_refund")          # pre_tool + post_tool checks run around it
+def issue_refund(claim_id: str, amount: int): ...
+
+@guard.reply                         # reply checks before the customer sees it
+def send_reply(text: str): ...
+</pre>
+<h4>Turning checks on and off</h4>
+<pre>
+# agent's evaluators.yaml
+preset: customer-support-azure
+rules:
+  presidio_pii:        {mode: block}                 # off | shadow | alert | block
+  ragas_faithfulness:  {mode: off}
+  refund_limit:        {mode: block, params: {max: 5000}}
+  llm_16_output_limit: {mode: shadow, positions: [pre_model]}
+</pre>
+<ol>
+  <li><b>Preset:</b> our defaults.</li>
+  <li><b>Org policy (risk owner):</b> rules marked <code>locked: true</code>, such as PII and refund limits. The agent team can't turn them off; at most they can request shadow mode, with approval.</li>
+  <li><b>Agent YAML:</b> everything not locked is the team's choice.</li>
+</ol>
+<p>A runtime switch moves a misbehaving rule to shadow without a redeploy (through a config store such as Azure App Configuration). Every switch records who, when and why. Without locked rules, the easiest way to "adopt" would be switching everything off.</p>
+
 <h2 id="dbt">The dbt analogy</h2>
 <p>dbt is the closest model for what we're building, and it points to a possible reuse.</p>
 <div class="tbl"><table>
@@ -712,6 +756,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 <tr><td>Azure OpenAI / Foundry, Bedrock, Vertex models</td><td>Called</td><td>Same <code>Judge</code> port</td><td><span class="pill later">Later (paying client)</span></td></tr>
 
 <tr class="group"><td colspan="4">Hosts (call us inline)</td></tr>
+<tr><td>OpenInference, OpenLLMetry (OTel instrumentors)</td><td>Upstream (zero-code watching)</td><td>Adopted as-is; we never write our own patches</td><td><span class="pill next">Planned · Tier 4</span></td></tr>
 <tr><td>Pydantic AI, LangGraph</td><td>Host</td><td>Framework hooks or middleware at all five inline positions</td><td><span class="pill later">Later · Tier 7</span></td></tr>
 <tr><td>Claude Agent SDK, Microsoft Agent Framework</td><td>Host</td><td>Same pattern, one adapter each</td><td><span class="pill later">Later</span></td></tr>
 <tr><td>LiteLLM</td><td>Host</td><td>Custom guardrail hooks before and after the call <span class="verify">verify</span></td><td><span class="pill later">Later · Tier 7</span></td></tr>
@@ -814,6 +859,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>17 Oct 2026</td><td>Added "Attaching to an agent, and turning checks on and off": four ways to attach (instrumentor, gateway, framework hook, decorators), no blocking monkey patches, three config layers with locked rules; decision D11.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "The dbt analogy", with where it breaks and decision D10 (batch rules as a dbt package?).</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Adoption": 13 reasons teams resist and our answers, the adoption path, measures and a kill signal; answers turned into tasks in Tiers 1, 3, 8 and 10. T9 corrected: client judges are the client's own models.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "After results land: the loop" (11 steps, who does each, built once via a five-method adapter per tool) and decision D9.</td></tr>
