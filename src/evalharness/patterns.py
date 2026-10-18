@@ -26,6 +26,19 @@ from evalharness.adapter import Adapter
 from evalharness.core import EvalRequest, EvalResult, Finding, Scale, Session, Step
 
 Found = dict[str, Any]
+NEGATIONS: tuple[str, ...] = (
+    "not",
+    "n't",
+    "no",
+    "never",
+    "nothing",
+    "neither",
+    "nor",
+    "yet",
+    "cannot",
+    "unable",
+)
+"""Words that make a sentence no claim (`claim_needs_action`)."""
 
 
 class Pattern(Adapter):
@@ -148,14 +161,31 @@ class ClaimNeedsAction(Pattern):
         claims:
           refund_issued: {phrases: ["refund has been issued"], tool: issue_refund}
 
-    This is the deterministic version: it matches phrases, so a negated phrase
-    ("your refund has not been issued yet") is a false alarm. The judge version,
-    which first asks a model what the reply claims, comes later."""
+    This is the deterministic version: it matches phrases, sentence by sentence,
+    and skips a sentence that is a question or carries a negation word
+    (`negations`). Run on FNOL's scenarios before the guard, every finding was a
+    negation ("Nothing has been paid yet"). The guard trades those false alarms
+    for a miss in a mixed sentence ("Your refund has been issued, not the
+    replacement"); the judge version, which asks a model what the reply claims,
+    comes later."""
 
     kind = "claim_needs_action"
 
-    def __init__(self, *, claims: Mapping[str, Mapping[str, Any]], **base: Any) -> None:
+    def __init__(
+        self,
+        *,
+        claims: Mapping[str, Mapping[str, Any]],
+        negations: Sequence[str] = NEGATIONS,
+        **base: Any,
+    ) -> None:
         super().__init__(**base)
+        self.negated = re.compile(
+            r"(?:\b(?:"
+            + "|".join(re.escape(n) for n in negations if n != "n't")
+            + r")\b)"
+            + (r"|n't\b" if "n't" in negations else ""),
+            re.I,
+        )
         self.claims = {
             name: (tuple(str(p).lower() for p in spec["phrases"]), str(spec["tool"]))
             for name, spec in claims.items()
@@ -167,9 +197,13 @@ class ClaimNeedsAction(Pattern):
         for i, step in enumerate(session.steps):
             if step.kind != "assistant":
                 continue
-            text = step.text.lower()
+            sentences = [
+                t.lower()
+                for t in re.split(r"(?<=[.!?])\s+", step.text)
+                if not t.rstrip().endswith("?") and not self.negated.search(t)
+            ]
             for name, (phrases, tool) in self.claims.items():
-                said = next((p for p in phrases if p in text), None)
+                said = next((p for p in phrases for t in sentences if p in t), None)
                 if said is None:
                     continue
                 checked += 1
@@ -196,6 +230,10 @@ class DecisionVsShould(Pattern):
           - {failed_calls_at_least: 3}
           - {user_says: ["speak to a human", "manager"]}
           - {tool_called: report_fraud}
+          - {result_of: get_claim, field: approved_amount, above: 25000}
+          - all:                            # every one of these at once
+              - {tool_called: request_payout}
+              - {result_of: get_claim, field: approved_amount, above: 25000}
 
     The yardstick here is a rule. A judge's or a human's label is a different
     source, reported as such when those arrive."""
@@ -213,8 +251,7 @@ class DecisionVsShould(Pattern):
         super().__init__(**base)
         self.decision, self.decision_tool, self.when = decision, decision_tool, tuple(when)
         for condition in self.when:
-            if not set(condition) & {"tool", "failed_calls_at_least", "user_says", "tool_called"}:
-                raise TypeError(f"unknown condition {dict(condition)}")
+            _known(condition)
 
     def check(self, session: Session) -> tuple[int, list[Found]]:
         made = any(
@@ -233,8 +270,27 @@ class DecisionVsShould(Pattern):
             return 1, [{"kind": "under", "label": f"no {self.decision} although {reasons[0]}"}]
         return 1, []
 
-    @staticmethod
-    def _holds(condition: Mapping[str, Any], session: Session) -> str:
+    @classmethod
+    def _holds(cls, condition: Mapping[str, Any], session: Session) -> str:
+        if "all" in condition:
+            reasons = [cls._holds(c, session) for c in condition["all"]]
+            return " and ".join(reasons) if all(reasons) else ""
+        if "result_of" in condition:
+            for step in session.steps:
+                if (
+                    step.kind != "tool_result"
+                    or step.is_error
+                    or step.name != condition["result_of"]
+                ):
+                    continue
+                found = (
+                    step.result.get(str(condition["field"]))
+                    if isinstance(step.result, Mapping)
+                    else None
+                )
+                value = _number(found)
+                if value is not None and value > float(condition["above"]):
+                    return f"{condition['result_of']} returned {condition['field']} = {value:g}"
         if "tool" in condition:
             for _, call in session.calls(str(condition["tool"])):
                 value = _number(call.arguments.get(str(condition["field"])))
@@ -268,20 +324,25 @@ class Consistency(Pattern):
           amount: "₹\\\\s?[\\\\d,]+"
 
     Values are compared after dropping everything but letters, digits and
-    hyphens, so “₹12,400” in a reply matches 12400 in a result."""
+    hyphens, so “₹12,400” in a reply matches 12400 in a result. With
+    `from_user` (the default), what the customer said counts as known too:
+    repeating the customer's own claim id back is not inventing it."""
 
     kind = "consistency"
 
-    def __init__(self, *, facts: Mapping[str, str], **base: Any) -> None:
+    def __init__(self, *, facts: Mapping[str, str], from_user: bool = True, **base: Any) -> None:
         super().__init__(**base)
         self.facts = {name: re.compile(pattern) for name, pattern in facts.items()}
+        self.from_user = from_user
 
     def check(self, session: Session) -> tuple[int, list[Found]]:
         found: list[Found] = []
         checked = 0
         known: set[str] = set()
         for i, step in enumerate(session.steps):
-            if step.kind == "tool_result":
+            if step.kind == "user" and self.from_user:
+                known |= {_norm(m) for p in self.facts.values() for m in p.findall(step.text)}
+            elif step.kind == "tool_result":
                 known |= {_norm(v) for v in _scalars(step.result)}
                 known |= {_norm(m) for p in self.facts.values() for m in p.findall(step.text)}
             elif step.kind == "assistant":
@@ -300,6 +361,16 @@ class Consistency(Pattern):
 
 
 # ------------------------------------------------------------------ helpers
+CONDITIONS = {"tool", "failed_calls_at_least", "user_says", "tool_called", "result_of", "all"}
+
+
+def _known(condition: Mapping[str, Any]) -> None:
+    if not set(condition) & CONDITIONS:
+        raise TypeError(f"unknown condition {dict(condition)}")
+    for inner in condition.get("all", ()):
+        _known(inner)
+
+
 def _number(value: object) -> float | None:
     if isinstance(value, bool):
         return None

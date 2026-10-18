@@ -102,3 +102,45 @@ uv pip install -r requirements-spike.txt
 python -m pytest tests          # offline, against recorded answers
 GROQ_API_KEY=... python -m spike.record   # live, re-records spike/fixtures/
 ```
+
+---
+
+# Run 2: the domain patterns on FNOL's own conversations (18 Oct 2026)
+
+**Question:** do the five patterns find anything real in real conversations?
+
+**How:** `scripts/patterns_on_scenarios.py` drove FNOL's 29 behaviour scenarios
+through AgentTwin with tracing on (scripted model, no network). The harness
+rebuilt 52 turns from the spans and grouped them into 48 conversations
+(`agent_harness.watch.sessions`). `examples/claims-fnol.yaml` judged them. All 29
+scenarios pass FNOL's own gates, so every finding was traced to its cause.
+
+## What the first run found, and why
+
+| Finding | Cause | Fixed where |
+|---|---|---|
+| The example used `same: [claim_id]` and a limit on `issue_payout.amount` | Guessed tool shapes. FNOL's tools take `id`; the amount is on the claim (`get_claim` → `approved_amount`), and the ₹25,000 limit is an approval decision, not an argument. | Example rewritten to the real names. `decision_vs_should` gained `result_of` and `all:` conditions to say "approval exactly when a payout is requested on a claim over ₹25,000". |
+| 3 of 3 "promised but not done" findings | Negation: "Nothing has been paid yet", "neither has been paid yet" | `claim_needs_action` now skips a sentence that is a question or carries a negation word. 3 → 0 false alarms. |
+| Claim ids "not from any system" | The agent repeated the id the customer typed | `consistency` counts the customer's own words as known (`from_user`, default on). |
+| No conversation matched the payout phrases | The example's wording was not FNOL's | Phrases taken from FNOL's real replies ("has been issued", "has been made to the account"). |
+
+## What remains: one real gap in FNOL's traces
+
+After those fixes, all 7 remaining findings have one cause, and it is not in the
+patterns: **a payout is not on the conversation's trace.**
+
+- The model's `request_payout` is recorded as span `agent.tool.local`, which the
+  turn rebuilder (`watch.record`, which reads `agent.tool`) does not read.
+- The approval workflow's claim lookup, its decision (`agent.approval.assess`) and
+  the payout itself (`agent.approval.carry_out` → `issue_payout`) each start a
+  new trace, with nothing linking them to the conversation.
+
+So a check that reads the conversation, ours or Langfuse's, cannot see money
+move: the payout that happened looks like a promise not kept (3 findings), its
+amount looks invented (3), and the approval looks unasked-for (1). FNOL's gates did
+not catch this because they check the claims system's records, not the traces.
+This is the context-propagation lesson from OpenTelemetry, met in practice.
+
+**The fix is in the harness, not here:** read `agent.tool.local` spans as tools,
+and carry the conversation's session id (or a span link) across the approval
+workflow's durable boundary. Pending the owner's decision.

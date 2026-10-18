@@ -166,8 +166,33 @@ def test_claim_needs_action(name: str, steps: list[Step], verdict: str) -> None:
     assert judged(PROMISE, *steps)[0] == verdict
 
 
-def test_the_deterministic_version_is_fooled_by_negation_as_documented() -> None:
-    assert judged(PROMISE, say("I can't confirm your refund has been issued yet."))[0] == "fail"
+NEGATED = [
+    ("nothing paid yet (FNOL's real reply)", "Nothing has been paid yet.", "pass"),
+    (
+        "neither paid yet (FNOL's real reply)",
+        "Both are approved; neither has been refunded yet.",
+        "pass",
+    ),
+    ("can't confirm", "I can't confirm your refund has been issued.", "pass"),
+    ("a question", "Has your refund has been issued?", "pass"),
+    (
+        "negation in another sentence only",
+        "Your refund has been issued. Nothing else is needed.",
+        "fail",
+    ),
+    (
+        "mixed sentence: a documented miss",
+        "Your refund has been issued, not the replacement.",
+        "pass",
+    ),
+]
+
+
+@pytest.mark.parametrize(("name", "text", "verdict"), NEGATED, ids=[r[0] for r in NEGATED])
+def test_a_negated_or_questioned_sentence_is_not_a_claim(
+    name: str, text: str, verdict: str
+) -> None:
+    assert judged(PROMISE, say(text))[0] == verdict
 
 
 # ------------------------------------------------------------------ decision_vs_should
@@ -214,9 +239,76 @@ def test_decision_vs_should(name: str, steps: list[Step], verdict: str, kinds: l
     assert (got[0], got[2]) == (verdict, kinds)
 
 
+APPROVAL = DecisionVsShould(
+    decision="awaiting_approval",
+    when=[
+        {
+            "all": [
+                {"tool_called": "request_payout"},
+                {"result_of": "get_claim", "field": "approved_amount", "above": 25000},
+            ]
+        }
+    ],
+)
+BIG, SMALL = {"id": "CLM-1", "approved_amount": 40000}, {"id": "CLM-2", "approved_amount": 9000}
+APPROVALS = [
+    (
+        "over the limit, approval asked",
+        [
+            call("get_claim"),
+            ok("get_claim", BIG),
+            call("request_payout"),
+            Step("decision", name="awaiting_approval"),
+        ],
+        "pass",
+        [],
+    ),
+    (
+        "over the limit, paid without approval",
+        [call("get_claim"), ok("get_claim", BIG), call("request_payout"), call("issue_payout")],
+        "fail",
+        ["under"],
+    ),
+    (
+        "within the limit, approval asked anyway",
+        [
+            call("get_claim"),
+            ok("get_claim", SMALL),
+            call("request_payout"),
+            Step("decision", name="awaiting_approval"),
+        ],
+        "fail",
+        ["over"],
+    ),
+    ("over the limit but no payout asked", [call("get_claim"), ok("get_claim", BIG)], "pass", []),
+    (
+        "the lookup failed: no amount known",
+        [
+            call("get_claim"),
+            Step("tool_result", name="get_claim", result=BIG, is_error=True),
+            call("request_payout"),
+        ],
+        "pass",
+        [],
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("name", "steps", "verdict", "kinds"), APPROVALS, ids=[r[0] for r in APPROVALS]
+)
+def test_approval_exactly_when_a_payout_is_over_the_limit(
+    name: str, steps: list[Step], verdict: str, kinds: list[str]
+) -> None:
+    got = judged(APPROVAL, *steps)
+    assert (got[0], got[2]) == (verdict, kinds)
+
+
 def test_an_unknown_condition_is_refused() -> None:
     with pytest.raises(TypeError):
         DecisionVsShould(decision="escalate", when=[{"moon_phase": "full"}])
+    with pytest.raises(TypeError):
+        DecisionVsShould(decision="escalate", when=[{"all": [{"moon_phase": "full"}]}])
 
 
 # ------------------------------------------------------------------ consistency
@@ -255,6 +347,13 @@ CONSISTENT = [
 @pytest.mark.parametrize(("name", "steps", "verdict"), CONSISTENT, ids=[r[0] for r in CONSISTENT])
 def test_consistency(name: str, steps: list[Step], verdict: str) -> None:
     assert judged(FACTS, *steps)[0] == verdict
+
+
+def test_repeating_the_customers_own_claim_id_is_not_inventing_it() -> None:
+    steps = [user("Where is my claim CLM-019001?"), say("I could not find CLM-019001.")]
+    assert judged(FACTS, *steps)[0] == "pass"
+    strict = Consistency(facts={"claim_id": r"CLM-\d{6}"}, from_user=False)
+    assert judged(strict, *steps)[0] == "fail"
 
 
 # ------------------------------------------------------------------ shared behaviour
@@ -387,12 +486,12 @@ def test_the_fnol_example_builds_and_catches_an_unbacked_payout_promise() -> Non
         "pii",
         "groundedness",
         "payout_needs_claim_lookup",
-        "payout_limit",
+        "payout_approval",
         "payout_promise_kept",
-        "escalation",
+        "handed_to_person",
         "facts_from_systems",
     }
-    session = (call("get_claim", claim_id="CLM-010003"), say("Your payout is on its way."))
+    session = (call("get_claim", id="CLM-010003"), say("Your payout has been issued."))
     verdicts = {
         name: check.evaluate(EvalRequest(session=Session("s", session))).verdict
         for name, check in built.items()
@@ -400,8 +499,8 @@ def test_the_fnol_example_builds_and_catches_an_unbacked_payout_promise() -> Non
     }
     assert verdicts == {
         "payout_needs_claim_lookup": "pass",
-        "payout_limit": "pass",
+        "payout_approval": "pass",
         "payout_promise_kept": "fail",
-        "escalation": "pass",
+        "handed_to_person": "pass",
         "facts_from_systems": "pass",
     }
