@@ -19,7 +19,8 @@ claim A doesn't count as reading claim B.</p>
         limits=["It checks order, not content: it doesn't check that the claim said “approved”. "
                 "For that, use <code>decision_vs_should</code> with <code>result_of</code>.",
                 "The score is the share of <code>issue_payout</code> calls that had a lookup first."],
-        questions=["In your ops world, what are the top three “A before B” rules? Do they all fit this shape?"],
+        questions=[("In your ops world, what are the top three “A before B” rules? Do they all fit this shape?",
+                    "Starting set: pay only after reading the claim; cancel or refund only after reading the order; change account details only after verifying the customer. All three fit this shape.")],
     ),
     "argument_limit": dict(
         title="argument_limit: a number must stay within a limit", q="Was a refund above ₹10,000 sent?",
@@ -31,7 +32,8 @@ discount cap, a maximum quantity. You name the tool, the argument, and
                 "<code>decision_vs_should</code> and <code>result_of: get_claim</code> instead. We only "
                 "learned that by running on FNOL's real conversations.",
                 "An argument that isn't a number is skipped, not failed."],
-        questions=["Are limits in your world usually on the call itself, or on a record the agent read first (like FNOL)?"],
+        questions=[("Are limits in your world usually on the call itself, or on a record the agent read first (like FNOL)?",
+                    "Both happen. A limit on the call uses <code>argument_limit</code>; a limit on a record the agent read uses <code>decision_vs_should</code> with <code>result_of</code>, as FNOL does. No change needed.")],
     ),
     "claim_needs_action": dict(
         title="claim_needs_action: don't say it unless it happened", q="Did it say “paid” when nothing was paid?",
@@ -46,8 +48,10 @@ example below is exactly that case.</p>""",
                 "A mixed sentence (“Your refund has been issued, not the replacement”) is skipped because of "
                 "the “not”. That's a known miss, traded for no false alarms.",
                 "A later version asks an AI judge what the reply claims, for wording the phrases don't cover."],
-        questions=["Is phrase matching good enough to start with, or would you rather pay for an AI judge from day one?",
-                   "Which “done” claims matter most in your world (paid, refunded, cancelled, booked, escalated)?"],
+        questions=[("Is phrase matching good enough to start with, or would you rather pay for an AI judge from day one?",
+                    "Phrases first. The AI-judge version comes later as an opt-in per rule, for teams that will pay for it."),
+                   ("Which “done” claims matter most in your world (paid, refunded, cancelled, booked, escalated)?",
+                    "Paid, refunded, cancelled and handed over first; booked when a booking agent comes along.")],
     ),
     "decision_vs_should": dict(
         title="decision_vs_should: decide when the rules say", q="Was a person asked to approve a large payout?",
@@ -66,7 +70,8 @@ finds two mistakes:</p>
                 "for a reason you didn't list looks needless.",
                 "The agent must record its decisions. Standard traces have no field for this yet "
                 "(" + link("trace-gaps", "see gaps") + ")."],
-        questions=["Is “under” and “over” the right way to talk about this to ops people, or would they say it differently?"],
+        questions=[("Is “under” and “over” the right way to talk about this to ops people, or would they say it differently?",
+                    "Keep <code>under</code> and <code>over</code> in the YAML; reports say “missed” and “needless”.")],
     ),
     "consistency": dict(
         title="consistency: facts must come from a system", q="Did it state an amount no system gave it?",
@@ -77,7 +82,8 @@ Values are compared without spaces, commas and symbols, so “₹12,400” in a 
 matches 12400 in a result.</p>""",
         limits=["It catches invented facts, not wrong arithmetic done on true ones.",
                 "Repeating the customer's own claim id back is allowed; that's not inventing it."],
-        questions=["Which facts would an ops team most want guarded: amounts, ids, dates, policy terms?"],
+        questions=[("Which facts would an ops team most want guarded: amounts, ids, dates, policy terms?",
+                    "Amounts and ids now. Dates next, because they need one format before they can be compared.")],
     ),
 }
 

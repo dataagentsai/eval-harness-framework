@@ -293,3 +293,9 @@ def test_the_file_source_reads_a_time_window(
     start: float | None, end: float | None, count: int
 ) -> None:
     assert len(list(OtlpFile(RECORDED).spans(start, end))) == count
+
+
+def test_rebuilt_steps_carry_their_time_in_order() -> None:
+    for session in sessions(OtlpFile(RECORDED).spans()):
+        times = [s.at for s in session.steps]
+        assert None not in times and times == sorted(times), session.id

@@ -39,10 +39,10 @@ reads the claim, pays it, and says so:</p>
 <h2>The five kinds of step</h2>
 {table(["Kind", "What it records", "Drawn as"], [
     ["<code>user</code>", "What the customer typed", "left lane"],
-    ["<code>assistant</code>", "What the agent replied", "middle lane"],
+    ["<code>assistant</code>", "What the agent replied. A person's reply after a hand-over is one too, named <code>human</code>, and checks on the agent's own words skip it.", "middle lane"],
     ["<code>tool_call</code>", "The agent asked a system to do something: its name and arguments", "right lane, dark"],
     ["<code>tool_result</code>", "What the system answered, or that it failed", "right lane, light"],
-    ["<code>decision</code>", "Something decided outside a tool, such as handing over to a person", "middle lane, dashed"],
+    ["<code>decision</code>", "Something decided outside a tool: handing over to a person, asking for approval, or a guardrail blocking a reply (<code>blocked</code>)", "middle lane, dashed"],
 ])}
 <div class="text">
 <p><b>Why order matters.</b> “Was the claim read <i>before</i> the payout?” only
@@ -52,8 +52,10 @@ a bag of facts.</p>
 payout succeeding are different things. A check like “don't say it's paid unless
 it was” needs the result, not just the call. A result is matched to its call by
 an id (<code>call_id</code>) when the agent records one, or else by tool name.</p>
-<p><b>Turns.</b> Each step also carries a <code>turn</code> number: turn 1 starts
-with the customer's first message, turn 2 with their second, and so on.</p>
+<p><b>Turns and times.</b> Each step also carries a <code>turn</code> number (turn 1
+starts with the customer's first message, turn 2 with their second) and, where
+the source records it, the time it happened (<code>at</code>). Traces record times;
+chat messages don't.</p>
 </div>
 {note("Where sessions come from", "<p>Two ways today: from chat messages in OpenAI's format (" + link("from-messages", "how") + "), or rebuilt from the agent's traces (" + link("traces", "how") + "). Either way, the checks see the same shape.</p>")}
 """
@@ -63,14 +65,15 @@ with the customer's first message, turn 2 with their second, and so on.</p>
       "Two small classes, the class diagram, and what isn't in them yet.", short="In code")
 def session_shape():
     diagram = "".join([
-        box(20, 20, 330, 220, "Session", ["id: str", "steps: tuple[Step, ...]", "outcome: str", "",
+        box(20, 20, 330, 240, "Session", ["id: str", "steps: tuple[Step, ...]", "outcome: str", "",
                                           "calls(name) → the tool calls", "succeeded(i) → did call i work?",
                                           "from_messages(id, messages)"], "solid"),
         path("M350 130 L470 130"),
         text(410, 118, "has many, in order", "sm", "middle"),
-        box(470, 20, 330, 220, "Step", ["kind: user · assistant ·", "  tool_call · tool_result · decision",
+        box(470, 20, 330, 240, "Step", ["kind: user · assistant ·", "  tool_call · tool_result · decision",
                                         "name: str   (tool or decision)", "text: str", "arguments: dict",
-                                        "result: object", "call_id: str", "is_error: bool · turn: int"], "bx"),
+                                        "result: object", "call_id: str", "is_error: bool · turn: int",
+                                        "at: float | None  (when)"], "bx"),
         box(830, 70, 190, 110, "EvalRequest", ["session: Session", "(what every check", "is handed)"], "bxm"),
         path("M830 125 L350 60", "lnd", end=False),
     ])
@@ -78,19 +81,22 @@ def session_shape():
 <div class="text"><p>The whole shape is two small classes. Both are frozen
 (they can't be changed once built), so a check can never alter what another
 check will read.</p></div>
-{fig(1040, 260, diagram, "Class diagram", "Session holds Steps in order. A check is handed an EvalRequest, which carries the Session.")}
+{fig(1040, 280, diagram, "Class diagram", "Session holds Steps in order. A check is handed an EvalRequest, which carries the Session.")}
 {code("src/evalharness/core.py", r"^StepKind = ", r"^    @classmethod", "Step and Session")}
 <h2>What a session does not hold yet</h2>
 {table(["Missing", "Why it might matter", "Today"], [
-    ["Time of each step", "“Replied within 2 minutes”, “waited 10 minutes for a person”", "Order only, no times"],
+
     ["Cost of each step", "“This conversation cost ₹40 in model calls”", "Not on the session; the cost engine will read calls separately"],
-    ["How it ended", "Resolved, abandoned, escalated", "The <code>outcome</code> field exists but traces rarely fill it"],
+    ["How it ended", "<code>resolved</code>, <code>handed_over</code>, <code>abandoned</code>, <code>error</code> (decided 18 Oct)", "The <code>outcome</code> field exists; standard traces have no attribute to fill it"],
     ["Who the customer is", "Per-customer limits (“3 refunds a month”)", "Kept on the request's meta, never sent to a vendor"],
 ])}
 {review("session-shape", "The Session shape", [
-    "Are the five kinds of step enough? Is there anything an ops person asks about that isn't one of them (for example a guardrail blocking a reply, or a person replying after a hand-over)?",
-    "Should each step carry its time? It costs little, and enables “how long did the customer wait” rules.",
-    "For <code>outcome</code>: which words should a conversation end with in your world (resolved, abandoned, escalated, something else)?",
+    ("Are the five kinds of step enough? Is there anything an ops person asks about that isn't one of them (for example a guardrail blocking a reply, or a person replying after a hand-over)?",
+     "Keep five kinds. A guardrail blocking a reply is a <code>decision</code> named <code>blocked</code>. A person's reply after a hand-over is an <code>assistant</code> step named <code>human</code>, which checks on the agent's own words skip. Built."),
+    ("Should each step carry its time? It costs little, and enables “how long did the customer wait” rules.",
+     "Yes. Every step has an optional time (<code>at</code>); sessions rebuilt from traces fill it in. Built."),
+    ("For <code>outcome</code>: which words should a conversation end with in your world (resolved, abandoned, escalated, something else)?",
+     "<code>resolved</code>, <code>handed_over</code>, <code>abandoned</code>, <code>error</code>. A host may use its own words; reports group unknown ones as “other”."),
 ])}
 """
 

@@ -45,8 +45,11 @@ class Adapter:
         name: str | None = None,
         judge: JudgeModel | None = None,
         scale: Scale | None = None,
+        description: str = "",
     ) -> None:
         self.name = name or self.kind
+        self.description = description
+        """The rule in plain words, for reports: what an ops reader sees beside the verdict."""
         self.judge = judge
         self.scale = scale or self.default_scale
 

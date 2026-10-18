@@ -121,6 +121,8 @@ class Meta:
 
 
 StepKind = Literal["user", "assistant", "tool_call", "tool_result", "decision"]
+HUMAN = "human"
+"""The name of an `assistant` step a person wrote, after a hand-over."""
 
 
 @dataclass(frozen=True)
@@ -128,7 +130,9 @@ class Step:
     """One thing that happened in a session, in order.
 
     A `decision` is something the agent or the harness decided outside a tool
-    call, such as `escalate`; a host records it under that name."""
+    call, such as `escalate` or a guardrail's `blocked`; a host records it
+    under that name. A person's reply after a hand-over is an `assistant` step
+    named `human`: checks on the agent's own words skip it."""
 
     kind: StepKind
     name: str = ""
@@ -141,6 +145,14 @@ class Step:
     """Pairs a result with its call, where the host records it."""
     is_error: bool = False
     turn: int = 0
+    at: float | None = None
+    """When it happened, in seconds since the epoch, where the source records
+    it (traces do; chat messages don't)."""
+
+    @property
+    def by_agent(self) -> bool:
+        """An agent reply, not a person's after a hand-over."""
+        return self.kind == "assistant" and self.name != HUMAN
 
 
 @dataclass(frozen=True)

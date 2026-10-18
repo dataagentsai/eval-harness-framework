@@ -1,6 +1,7 @@
 """Build the Eval Harness Tutorial into tutorial/site/*.html.
 
     .venv/bin/python tutorial/build.py
+    .venv/bin/python tutorial/build.py --publish ~/cleandataengineering-site/learn/eval-harness
 
 Pages register themselves with @page(...) in pages_*.py. The tree of parents
 gives the left panel, the breadcrumb, the top tabs and the back/next order.
@@ -22,13 +23,19 @@ import live  # noqa: E402
 from reg import PAGES, href  # noqa: E402
 
 OUT = Path(__file__).parent / "site"
+PUBLISH = "--publish" in sys.argv
+"""`--publish DIR`: write the site there (cleandataengineering.ai's repo) with a home link."""
+HOME = '<a class="home" href="https://cleandataengineering.ai/">cleandataengineering.ai</a>'
+if PUBLISH:
+    OUT = Path(sys.argv[sys.argv.index("--publish") + 1]).expanduser()
 SECTIONS = ["pages_start", "pages_session", "pages_patterns", "pages_yaml", "pages_traces",
             "pages_review"]
 
 EXTRA_CSS = r"""
 .review{background:#FFF8E1;border:2.5px solid var(--ink);border-radius:var(--wob);padding:12px 18px;margin:8px 0 12px;max-width:80ch}
 .review>b:first-child{display:block;font-size:15px;letter-spacing:.06em;text-transform:uppercase;font-weight:400;margin-bottom:4px}
-.review ol{margin:0 0 6px;padding-left:24px}.review li{margin-bottom:6px}
+.review ol{margin:0 0 6px;padding-left:24px}.review li{margin-bottom:10px}
+.dec{display:inline-block;margin-top:4px;padding:2px 10px;background:#DCF1D2;border:1.5px solid var(--ink);border-radius:var(--wob)}
 .st{display:inline-block;font-size:14px;letter-spacing:.05em;text-transform:uppercase;padding:0 10px;border:1.5px solid var(--ink);border-radius:var(--wob)}
 .st-ok{background:#DCF1D2}.st-no{background:#fff;border-style:dashed}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -126,7 +133,7 @@ def render(pid, order):
 <link rel="stylesheet" href="style.css"></head><body>
 {kit.DEFS}
 <header class="top"><div class="row"><button class="menu" aria-label="Show the page list">☰ Pages</button>
-<a class="brand" href="index.html">Eval Harness, drawn simply</a><nav class="tabs" aria-label="Sections">{tabs(pid)}</nav></div>
+{HOME if PUBLISH else ""}<a class="brand" href="index.html">Eval Harness, drawn simply</a><nav class="tabs" aria-label="Sections">{tabs(pid)}</nav></div>
 <div class="crumbs">{crumbs(pid)}</div></header>
 <aside class="side" aria-label="All pages">{side(pid)}</aside>
 <main><div class="wrap"><article class="page">

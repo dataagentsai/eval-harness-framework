@@ -643,3 +643,52 @@ def test_the_fnol_example_builds_and_catches_an_unbacked_payout_promise() -> Non
         "handed_to_person": "pass",
         "facts_from_systems": "pass",
     }
+
+
+# ------------------------------------------------------------------ a person's replies
+PAID_CLAIM = ClaimNeedsAction(
+    claims={"paid": {"phrases": ["has been paid"], "tool": "issue_payout"}}
+)
+AMOUNTS = Consistency(facts={"amount": r"₹\s?[\d,]+"})
+
+
+@pytest.mark.parametrize(
+    ("name", "pattern", "reply", "verdict"),
+    [
+        ("agent_claim_is_checked", PAID_CLAIM, say("Your claim has been paid."), "fail"),
+        (
+            "human_claim_is_skipped",
+            PAID_CLAIM,
+            Step("assistant", name="human", text="Your claim has been paid."),
+            "pass",
+        ),
+        ("agent_fact_is_checked", AMOUNTS, say("You will get ₹15,000."), "fail"),
+        (
+            "human_fact_is_skipped",
+            AMOUNTS,
+            Step("assistant", name="human", text="You will get ₹15,000."),
+            "pass",
+        ),
+    ],
+)
+def test_checks_on_the_agents_words_skip_a_persons_reply(
+    name: str, pattern: Pattern, reply: Step, verdict: str
+) -> None:
+    assert judged(pattern, user("Is my claim paid?"), reply)[0] == verdict
+
+
+def test_every_rule_takes_a_plain_description() -> None:
+    built = build(
+        {
+            "judge": JUDGE,
+            "evaluators": {
+                "lookup_first": {
+                    "adapter": "requires_before",
+                    "action": "issue_payout",
+                    "before": "get_claim",
+                    "description": "Never pay a claim nobody has read.",
+                }
+            },
+        }
+    )
+    assert built["lookup_first"].description == "Never pay a claim nobody has read."

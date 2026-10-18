@@ -46,9 +46,12 @@ on its 29 test scenarios (48 conversations).</p>
 {table(["Block", "In plain words", "Pattern"], rows)}
 {note("What running it on real conversations taught us", "<p>The first version guessed FNOL's tool names and was wrong everywhere. Four fixes came from that run: the real names, the <code>result_of</code> and <code>all:</code> conditions, the negation guard, and counting what the customer said as known facts. The rule now: <b>write rules from the spec, never from guesses.</b></p>")}
 {review("yaml", "The FNOL rules file", [
-    "Could an ops person write this file without help? Which line would they get stuck on?",
-    "Is anything missing that an FNOL ops lead would want checked?",
-    "The comments explain each rule. Would you rather have a separate plain-English description field on each rule, which reports would show?",
+    ("Could an ops person write this file without help? Which line would they get stuck on?",
+     "Not yet: the regular expressions under <code>consistency</code> are where they'd stop. Next: ready-made fact types (an Indian-rupee amount, a claim id) so nobody writes a regular expression."),
+    ("Is anything missing that an FNOL ops lead would want checked?",
+     "Nothing added until a real FNOL ops lead asks; rules come from the spec."),
+    ("The comments explain each rule. Would you rather have a separate plain-English description field on each rule, which reports would show?",
+     "Yes. Every rule takes an optional <code>description</code>, and the FNOL example now has one per rule. Built."),
 ])}
 """
 

@@ -227,10 +227,10 @@ def _session(key: str, group: list[Span]) -> tuple[float, Session]:
 
     steps: list[Step] = []
     turn = 0
-    for _, _, step in sorted(timed, key=lambda t: (t[0], t[1])):
+    for at, _, step in sorted(timed, key=lambda t: (t[0], t[1])):
         if step.kind == "user":
             turn += 1
-        steps.append(replace(step, turn=turn))
+        steps.append(replace(step, turn=turn, at=at))
     return group[0].start, Session(id=key, steps=tuple(steps))
 
 

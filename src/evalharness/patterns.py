@@ -209,7 +209,7 @@ class ClaimNeedsAction(Pattern):
         found: list[Found] = []
         checked = 0
         for i, step in enumerate(session.steps):
-            if step.kind != "assistant":
+            if not step.by_agent:
                 continue
             sentences = _plain_sentences(step.text, self.negated)
             for name, (phrases, tool) in self.claims.items():
@@ -406,7 +406,7 @@ class Consistency(Pattern):
             elif step.kind == "tool_result":
                 known |= {_norm(v) for v in _scalars(step.result)}
                 known |= {_norm(m) for p in self.facts.values() for m in p.findall(step.text)}
-            elif step.kind == "assistant":
+            elif step.by_agent:
                 for name, pattern in self.facts.items():
                     for value in pattern.findall(step.text):
                         checked += 1

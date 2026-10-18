@@ -1,6 +1,7 @@
 """evalharness: vendor-neutral checks for AI agents. See docs/PLAN.html."""
 
 from evalharness.core import (
+    HUMAN,
     NEEDS,
     EvalRequest,
     EvalResult,
@@ -22,6 +23,7 @@ from evalharness.core import (
 )
 
 __all__ = [
+    "HUMAN",
     "NEEDS",
     "EvalRequest",
     "EvalResult",

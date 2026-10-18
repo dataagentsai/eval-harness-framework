@@ -66,8 +66,10 @@ found on the real recording, are in {link("trace-rebuild", "how the rebuild work
 <div class="text"><p>The one that looked the order up first passes. The one where the lookup
 failed passes too: it never refunded, so there was nothing to check.</p></div>
 {review("traces", "From traces", [
-    "Is following one conversation from raw spans to verdict the right way to explain this, or too much detail?",
-    "Phoenix is next (it's where many teams' traces already are). Is there a store your clients use more, such as App Insights or Langfuse?",
+    ("Is following one conversation from raw spans to verdict the right way to explain this, or too much detail?",
+     "Yes, keep the one-conversation walk-through."),
+    ("Phoenix is next (it's where many teams' traces already are). Is there a store your clients use more, such as App Insights or Langfuse?",
+     "App Insights second (the Azure clients, and FNOL already writes there), then Langfuse."),
 ])}
 """
 
@@ -115,6 +117,7 @@ which of its own attributes means “handed over”. The reference agent records
 ])}
 {note("What we'll do about it", "<p>Two things: let a team map its own attribute to a decision in YAML, and add these gaps to our proposal to the OpenTelemetry group (Tier 11). The standard itself is still marked “in development”, so this is a good moment to propose it.</p>")}
 {review("trace-gaps", "Gaps in the standard", [
-    "Should we propose a hand-over field to OpenTelemetry now, or wait until a second team needs it?",
+    ("Should we propose a hand-over field to OpenTelemetry now, or wait until a second team needs it?",
+     "Wait for a second team. Meanwhile a team maps its own attribute to a decision in YAML."),
 ])}
 """

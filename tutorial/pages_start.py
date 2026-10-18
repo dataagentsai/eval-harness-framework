@@ -80,25 +80,27 @@ def picture():
              ("Rebuild", "Turn the raw records into one Session per conversation.", True),
              ("Plan", "Read your YAML: which checks, with which settings.", True),
              ("Check", "Run each check on each session. Each check answers in the same result shape.", True),
-             ("Decide and record", "Turn results into an action (alert, block) and write them back.", False)]
+             ("Decide and record", "Turn results into an action (block, alert), write them back, send a weekly report.", False)]
     body = []
     for i, (name, words, built) in enumerate(steps):
         x = 20 + i * 200
-        body.append(box(x, 40, 170, 120, name, [w for w in _wrap(words, 20)], "solid" if built else "bxm"))
+        body.append(box(x, 40, 170, 150, name, [w for w in _wrap(words, 20)], "solid" if built else "bxm"))
         body.append(num(x + 14, 40, i + 1))
         if i < len(steps) - 1:
-            body.append(arrow(x + 170, 100, x + 200, 100))
-    body.append(text(20, 200, "Solid boxes are built. The dashed one is not built yet.", "sm"))
+            body.append(arrow(x + 170, 115, x + 200, 115))
+    body.append(text(20, 225, "Solid boxes are built. The dashed one is not built yet.", "sm"))
     return f"""
-{fig(1020, 215, "".join(body), "Five steps", "The framework is these five steps. Each step talks to the next through a fixed shape, so any piece can be swapped.")}
+{fig(1020, 240, "".join(body), "Five steps", "The framework is these five steps. Each step talks to the next through a fixed shape, so any piece can be swapped.")}
 <div class="text">
 <p><b>Why the steps are separate.</b> Each step meets the next through a fixed shape (a <i>port</i>). A Phoenix reader and an App Insights reader both produce the same Session, so the checks never know where the data came from. A Presidio check and one of our patterns both answer with the same result, so the reports never know who judged. Swapping a tool means adding one adapter and changing one line of YAML.</p>
 <p><b>Why “decide” is its own step.</b> A check only says what it found. Whether that blocks a reply, raises an alert or is just counted is a separate choice, so the same check can block in one company and only alert in another.</p>
 <p><b>We never replace a team's tools.</b> No database, dashboard or chat UI of our own: we read from where traces already are and write verdicts back there.</p>
 </div>
 {review("picture", "The whole picture", [
-    "Is the five-step picture clear enough to explain to an ops person in two minutes? If not, which step is unclear?",
-    "Is anything missing that an ops team would expect, such as a weekly report or alerts?",
+    ("Is the five-step picture clear enough to explain to an ops person in two minutes? If not, which step is unclear?",
+     "Yes. The five steps stay the explanation."),
+    ("Is anything missing that an ops team would expect, such as a weekly report or alerts?",
+     "Yes: a weekly report and alerts. Both belong to step 5 (decide and record), now drawn there as not built yet."),
 ])}
 """
 

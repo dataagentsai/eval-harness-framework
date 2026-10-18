@@ -1,23 +1,23 @@
 """Your review: every open question in the tutorial, in reading order."""
 
-from reg import PAGES, REVIEWS, link, page
+from reg import PAGES, REVIEWS, link, page, review_box
 
 
-@page("review", "Everything I need your opinion on", None,
-      "Every review question in the tutorial, in one list.", short="Your review")
+@page("review", "Questions and decisions", None,
+      "Every review question in the tutorial and what was decided, in one list.", short="Your review")
 def review_page():
     if not REVIEWS:
         return "<p>No open questions.</p>"
     order = {pid: PAGES[pid]["order"] for pid in PAGES}
-    blocks = []
-    for pid, title, questions in sorted(REVIEWS, key=lambda r: order.get(r[0], 0)):
-        items = "".join(f"<li>{q}</li>" for q in questions)
-        blocks.append(f'<div class="review"><b>{link(pid, title)}</b><ol>{items}</ol></div>')
+    blocks = [review_box(title, questions, heading=link(pid, title))
+              for pid, title, questions in sorted(REVIEWS, key=lambda r: order.get(r[0], 0))]
     total = sum(len(r[2]) for r in REVIEWS)
+    open_ = sum(1 for r in REVIEWS for q in r[2] if not isinstance(q, tuple))
+    status = (f"{open_} of {total} questions are open." if open_
+              else f"All {total} questions are decided (18 Oct 2026: you accepted my recommendations).")
     return f"""
-<div class="text"><p>{total} questions across {len(REVIEWS)} pages. Read the page first; each
-question links back to it. Answer in chat with the page name and the number,
-for example “session 2: yes, add times”. Short answers are fine. Skip any
-you don't have a view on.</p></div>
+<div class="text"><p>{status} Each links back to the page that explains it.
+Open questions are answered in chat with the page name and the number, for
+example “session 2: yes, add times”. To change a decision, say so the same way.</p></div>
 {''.join(blocks)}
 """
