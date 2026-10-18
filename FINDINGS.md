@@ -141,6 +141,29 @@ amount looks invented (3), and the approval looks unasked-for (1). FNOL's gates 
 not catch this because they check the claims system's records, not the traces.
 This is the context-propagation lesson from OpenTelemetry, met in practice.
 
-**The fix is in the harness, not here:** read `agent.tool.local` spans as tools,
-and carry the conversation's session id (or a span link) across the approval
-workflow's durable boundary. Pending the owner's decision.
+**Fixed in the harness (18 Oct, reference-agent c10d572, claims-fnol-azure e9ce5ea),
+on the owner's decision (D14):**
+
+- `telemetry.work_scope(session_id, key)`: work done outside a turn for a
+  conversation stamps its `session.id` on every span it opens, and decides
+  capture as a turn does. The span contract declares `session.id` as allowed
+  anywhere. The contract test caught the first attempt, which put it on spans
+  that had not declared it.
+- Local tools (`request_payout`) record side effect, outcome, arguments and
+  result, as MCP tools do.
+- The turn rebuilder reads local tool spans, and `record.background()` reads the
+  work done outside turns. `watch.sessions` merges it in where it happened:
+  inside a turn, before its reply (a payout within the limit is made while
+  `request_payout` runs); between turns otherwise (a payout a person approved).
+- FNOL's payout approval and the reference agent's refund approval run their
+  assessment and carrying out in `work_scope`.
+
+**After the fix, all five patterns pass on all 29 scenarios, with nothing
+left to explain.** They now have real material: 4 payouts for "never pay a
+claim nobody has read", 48 conversations for approvals and hand-offs, 2 kept
+promises, and 17 conversations stating claim ids or amounts. A first version
+of the merge put in-turn work after the reply, which made a payout look
+announced before it was made; placing it by time window fixed that.
+
+Suites: reference-agent 2,107 passed with the same 2 earlier failures; FNOL 755
+passed.

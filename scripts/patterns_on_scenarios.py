@@ -52,8 +52,9 @@ def main() -> None:
     results = asyncio.run(
         run_suite(scenario_paths(args.scenarios), load_binding(args.binding), on_result=done)
     )
-    turns = record.turns(record.from_spans(exporter.get_finished_spans()))
-    found = sessions(turns)
+    nodes = record.from_spans(exporter.get_finished_spans())
+    turns = record.turns(nodes)
+    found = sessions(turns, record.background(nodes))
     started = {t.session_id or t.run_id: t.started for t in turns}
 
     def scenario_of(session_id: str) -> str:
