@@ -202,3 +202,33 @@ All the others were ours: the patterns' first versions (negation, windows,
 customer facts) and examples written from guesses instead of from each agent's
 spec. The second lesson is the more useful one for adoption: **write a domain's
 rules from its spec, and say which part of the spec a rule covers.**
+
+---
+
+# Run 4: sessions from a third-party agent's own traces (18 Oct 2026)
+
+`scripts/record_genai_traces.py` runs a small Pydantic AI 2.54 refund agent with
+a scripted model (no model is called) and Pydantic AI's built-in
+instrumentation, and writes its spans as OTLP JSON
+(`tests/fixtures/otlp/pydantic_ai_refunds.jsonl`): 16 spans, 3 conversations, 4
+agent runs. `evalharness.traces` reads the file and rebuilds each conversation
+as a `Session` from the OpenTelemetry GenAI conventions alone, with no code on
+the agent's side. `requires_before` then fails the conversation that refunds
+without looking the order up, and passes the other two.
+
+| What we saw | What the reader does |
+|---|---|
+| Each agent run is its own trace; `gen_ai.conversation.id` joins them | Groups by `gen_ai.conversation.id`, then `session.id`, then the trace id |
+| Every `chat` span resends the whole history in `gen_ai.input.messages` | Takes only the user's words after the model last spoke, once per trace |
+| Pydantic AI sends tool results back as `role: user` with no text part (the conventions' example uses `role: tool`) | A user message with no text part is not a user turn |
+| A tool call appears twice: as a `tool_call` part in the output, and as an `execute_tool` span with the result | One step per call id; a result comes from the `execute_tool` span, or from a `tool_call_response` part when there is no tool span |
+| A failed tool has status code 2 and the retry message as its result | `is_error` from the status |
+
+**Gap in the conventions.** They have no attribute for a decision such as a
+hand-over, or for how a conversation ended. Sessions rebuilt from GenAI spans
+carry neither, so `decision_vs_should` cannot run on them until a team maps its
+own attribute (as reference-agent records `termination`). This is one more item
+for the proposal to the GenAI conventions group (Tier 11).
+
+The GenAI conventions now live in their own repository
+(open-telemetry/semantic-conventions-genai) and are all still `development`.

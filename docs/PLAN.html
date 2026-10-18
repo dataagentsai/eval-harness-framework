@@ -133,7 +133,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#t1"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 1</b>Verified landscape + core package</a>
   <a href="#t2"><span class="pill doing">In progress</span> <span class="pill me">v1</span><b>Tier 2</b>Sessions + domain patterns</a>
   <a href="#t3"><span class="pill next">Planned</span> <span class="pill me">v2</span><b>Tier 3</b>Positions + the decide step</a>
-  <a href="#t4"><span class="pill next">Planned</span> <span class="pill me">v1 (pull only)</span><b>Tier 4</b>OpenTelemetry in and out</a>
+  <a href="#t4"><span class="pill doing">In progress</span> <span class="pill me">v1 (pull only)</span><b>Tier 4</b>OpenTelemetry in and out</a>
   <a href="#t5"><span class="pill next">Planned</span> <span class="pill me">v1 (6 built rules)</span><b>Tier 5</b>Cost pack (36 rules)</a>
   <a href="#t6"><span class="pill next">Planned</span> <span class="pill me">v1 (Presidio only)</span><b>Tier 6</b>Security pack</a>
   <a href="#t7"><span class="pill later">Later</span> <span class="pill me">v2</span><b>Tier 7</b>Host adapters</a>
@@ -217,10 +217,12 @@ svg #ah path{fill:var(--muted)}
 </div>
 
 <div class="card" id="t4">
-  <div class="tierhead"><h3>Tier 4 · Online: OpenTelemetry in, OpenTelemetry out</h3><span class="pill next">Planned</span></div>
+  <div class="tierhead"><h3>Tier 4 · Online: OpenTelemetry in, OpenTelemetry out</h3><span class="pill doing">In progress</span></div>
   <p>OpenTelemetry (OTel) is the standard format for traces. Online checks run in a separate eval worker, never inside the agent or the Collector. The worker gets traces in one of two ways: a copy from the Collector (tap), or by reading where traces already land (pull).</p>
   <ul class="tasks">
-    <li><span class="pill me">Claude</span><span><code>TraceSource</code> adapter: OTel traces that follow the GenAI conventions become <code>EvalRequest</code>s and <code>Session</code>s.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span><code>TraceSource</code> port, <code>Span</code>, and an OTLP JSON file source (what a Collector's file exporter writes). <code>traces.sessions</code> rebuilds conversations from spans that follow the OTel GenAI conventions: <code>chat</code> messages, <code>execute_tool</code> spans, joined by <code>gen_ai.conversation.id</code>. Tested on Pydantic AI's own instrumentation (recorded offline, scripted model): <code>requires_before</code> catches a refund with no lookup. The conventions have no attribute for a hand-over or for how a conversation ended, so <code>decision_vs_should</code> can't run on these traces yet.</span></li>
+    <li><span class="pill me">Claude</span><span>Turn <code>EvalRequest</code>s from the same spans (one per <code>invoke_agent</code> run), so per-reply checks run online too.</span></li>
+    <li><span class="pill me">Claude</span><span>Phoenix source (REST <code>/v1/projects/{id}/spans</code>, paged) and the OpenInference attribute names Phoenix's own instrumentors use. Live test waits for memory: Phoenix is a server, and the Mac has 8 GB.</span></li>
     <li><span class="pill me">Claude</span><span>Tap: an OTLP receiver in the eval worker; a Collector config that sends it a copy.</span></li>
     <li><span class="pill me">Claude</span><span>Pull: read from Phoenix or Langfuse on a schedule, with backfill (re-run new rules on old traces).</span></li>
     <li><span class="pill me">Claude</span><span>Skip rules already judged inline; run session rules when a session closes.</span></li>
@@ -469,7 +471,7 @@ svg #ah path{fill:var(--muted)}
 <p>A port is an interface. The engine only knows the port; each tool sits behind an adapter that implements it, chosen by name in YAML.</p>
 <div class="tbl"><table>
 <tr><th>Port</th><th>Role</th><th>What it does</th><th>Status</th></tr>
-<tr><td><code>TraceSource</code></td><td>Upstream</td><td>Reads traces, runs or datasets and turns them into <code>EvalRequest</code> or <code>Session</code></td><td><span class="pill next">Tier 4</span></td></tr>
+<tr><td><code>TraceSource</code></td><td>Upstream</td><td>Reads traces, runs or datasets and turns them into <code>EvalRequest</code> or <code>Session</code></td><td><span class="pill doing">Built: OTLP file</span></td></tr>
 <tr><td><code>InlineHook</code></td><td>Host</td><td>Lets a framework, gateway or test runner call our checks at a position</td><td><span class="pill later">Tier 7</span></td></tr>
 <tr><td><code>Evaluator</code></td><td>Called</td><td>One check: request in, result out</td><td><span class="pill done">Exists, extended in spike</span></td></tr>
 <tr><td><code>Judge</code></td><td>Called</td><td>One judge-model setting, handed to each SDK in its own shape</td><td><span class="pill done">Spike</span></td></tr>
@@ -938,6 +940,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>18 Oct 2026</td><td>Tier 4 started: <code>TraceSource</code> port and OTLP file source; sessions rebuilt from OTel GenAI spans, tested on Pydantic AI's own traces (177 tests). Gap found: the GenAI conventions have no hand-over or outcome attribute.</td></tr>
 <tr><td>18 Oct 2026</td><td>Clothing-agent run done; examples now written from each agent's spec; all checks pass on both agents. Tier 2 waits only on your review.</td></tr>
 <tr><td>18 Oct 2026</td><td>All open recommendations accepted: D3, D5–D12 are now T15–T23; no decisions open.</td></tr>
 <tr><td>18 Oct 2026</td><td>Trace gap fixed in the harness (T14, was D14); all five patterns pass on all 29 FNOL scenarios.</td></tr>
