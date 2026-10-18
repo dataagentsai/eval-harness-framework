@@ -135,7 +135,14 @@ def render(pid, order):
 
 
 def main():
+    # Importing a pages module registers its pages; the order here is the reading order.
+    import pages_start  # noqa: F401
+    import pages_session  # noqa: F401
+    import pages_patterns  # noqa: F401
+    import pages_yaml  # noqa: F401
+    import pages_traces  # noqa: F401
     import pages_review  # noqa: F401
+
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.html"):
         old.unlink()
