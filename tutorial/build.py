@@ -28,7 +28,8 @@ PUBLISH = "--publish" in sys.argv
 HOME = '<a class="home" href="https://cleandataengineering.ai/">cleandataengineering.ai</a>'
 if PUBLISH:
     OUT = Path(sys.argv[sys.argv.index("--publish") + 1]).expanduser()
-SECTIONS = ["pages_start", "pages_session", "pages_patterns", "pages_yaml", "pages_traces",
+SECTIONS = ["pages_start", "pages_arch", "pages_outputs", "pages_session", "pages_patterns",
+            "pages_yaml", "pages_traces", "pages_catalog", "pages_requirements", "pages_design",
             "pages_review"]
 
 EXTRA_CSS = r"""
@@ -44,8 +45,9 @@ EXTRA_CSS = r"""
 table.res td:first-child{white-space:nowrap;width:1%}
 """
 
-TABS = [("index", "Start"), ("session", "Sessions"), ("patterns", "Five patterns"),
-        ("yaml", "Writing rules"), ("traces", "From traces"), ("review", "Your review")]
+TABS = [("index", "Start"), ("arch", "Architecture"), ("session", "Sessions"), ("patterns", "Five patterns"),
+        ("yaml", "Writing rules"), ("traces", "From traces"), ("catalog", "Catalog"),
+        ("requirements", "Requirements"), ("design", "Design"), ("review", "Your review")]
 
 
 def children(pid):
