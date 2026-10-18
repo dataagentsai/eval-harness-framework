@@ -130,8 +130,8 @@ svg #ah path{fill:var(--muted)}
 
 <div class="strip" id="tiers">
   <a href="#t0"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 0</b>Spike: one shape, four providers</a>
-  <a href="#t1"><span class="pill doing">In progress</span> <span class="pill me">v1</span><b>Tier 1</b>Verified landscape + core package</a>
-  <a href="#t2"><span class="pill next">Planned</span> <span class="pill me">v1</span><b>Tier 2</b>Sessions + domain patterns</a>
+  <a href="#t1"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 1</b>Verified landscape + core package</a>
+  <a href="#t2"><span class="pill doing">In progress</span> <span class="pill me">v1</span><b>Tier 2</b>Sessions + domain patterns</a>
   <a href="#t3"><span class="pill next">Planned</span> <span class="pill me">v2</span><b>Tier 3</b>Positions + the decide step</a>
   <a href="#t4"><span class="pill next">Planned</span> <span class="pill me">v1 (pull only)</span><b>Tier 4</b>OpenTelemetry in and out</a>
   <a href="#t5"><span class="pill next">Planned</span> <span class="pill me">v1 (6 built rules)</span><b>Tier 5</b>Cost pack (36 rules)</a>
@@ -162,7 +162,7 @@ svg #ah path{fill:var(--muted)}
 </div>
 
 <div class="card" id="t1">
-  <div class="tierhead"><h3>Tier 1 · Verified landscape, then the core package</h3><span class="pill doing">In progress</span></div>
+  <div class="tierhead"><h3>Tier 1 · Verified landscape, then the core package</h3><span class="pill done">Done 18 Oct</span></div>
   <p>First, check that what this page says about other tools is still true, because these tools change monthly. Then lift the spike into a real package that the reference agent also uses, so the code exists once.</p>
   <ul class="tasks">
     <li class="ok"><span class="pill done">Done</span><span>Landscape check with sources: LangSmith, Langfuse, Phoenix, Braintrust, Azure Foundry evaluation, Bedrock evaluations and guardrails, Promptfoo, Inspect. For each: does it already mix providers, block inline, or link checks to a spec? Every item marked <span class="verify">verify</span> on this page gets confirmed or corrected.</span></li>
@@ -174,7 +174,7 @@ svg #ah path{fill:var(--muted)}
     <li class="ok"><span class="pill done">Done</span><span>A contract test table per port that every adapter must pass.</span></li>
     <li><span class="pill me">Claude</span><span>Packaging the OTel way: a tiny agent-side API that does nothing until configured; adapters and judges in the worker as pinned extras; a core/contrib split with an owner per adapter.</span></li>
     <li><span class="pill me">Claude</span><span>A stability label (alpha, beta, stable, deprecated) on every adapter, shown in the supported list.</span></li>
-    <li><span class="pill me">Claude</span><span>Presets (for example <code>customer-support-azure</code>), so a team touches only rules, placement and consequence.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Presets: <code>customer-support</code> ships in the package; a team's file overrides a check field by field, removes one with <code>null</code>, and must add its own judge.</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Live run of all four adapters through <code>evaluators.yaml</code>. Found: DeepEval's "deterministic" check takes about 500 ms (declared online, not inline); Presidio's first call takes about 2 s to load (inline hosts must warm it up).</span></li>
     <li class="ok"><span class="pill done">Done</span><span>FNOL wired to the new sibling: path source, CI checkout, image build contexts. FNOL's own CI tests caught the missing checkout. Suites: reference-agent 2,093 passed with the same 2 earlier failures; FNOL 755 passed. FNOL CI (run 39102832380, 18 Oct) passed end to end, including both Docker images with <code>evalharness</code> inside, after fixing the lint errors that had blocked it since 14 Oct.</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Move the four spike adapters into an adapters package; scales and severities move into <code>evaluators.yaml</code>.</span></li>
@@ -182,16 +182,17 @@ svg #ah path{fill:var(--muted)}
 </div>
 
 <div class="card" id="t2">
-  <div class="tierhead"><h3>Tier 2 · Sessions and the domain patterns</h3><span class="pill next">Planned</span></div>
+  <div class="tierhead"><h3>Tier 2 · Sessions and the domain patterns</h3><span class="pill doing">In progress</span></div>
   <p>Most of the questions ops teams ask are about a whole conversation, not one reply: "a cancel happened with no order lookup before it", "a refund was promised but never issued". These need a session-level shape and a small set of reusable patterns that a domain team fills in with YAML.</p>
   <ul class="tasks">
-    <li><span class="pill both">Together</span><span>Design the <code>Session</code> data class: the ordered turns, every tool call with its result and id, decisions such as escalation, and the outcome.</span></li>
-    <li><span class="pill me">Claude</span><span>Pattern <code>requires_before</code>: action B needs action A earlier in the session.</span></li>
-    <li><span class="pill me">Claude</span><span>Pattern <code>argument_limit</code>: a tool argument above or below a value (refund limit).</span></li>
-    <li><span class="pill me">Claude</span><span>Pattern <code>claim_needs_action</code>: a judge model lists what the reply <i>says</i> was done, then a plain code check compares that with the tool calls.</span></li>
-    <li><span class="pill me">Claude</span><span>Pattern <code>decision_vs_should</code>: over- and under-escalation, against a rule, a judge or a human-labelled sample. Each number says which source it came from.</span></li>
-    <li><span class="pill me">Claude</span><span>Pattern <code>consistency</code>: facts in the reply must match the tool results.</span></li>
-    <li><span class="pill you">You</span><span>Review the pattern YAML: could an ops person write it without help?</span></li>
+    <li class="ok"><span class="pill done">Done</span><span><code>Session</code> and <code>Step</code>: the ordered turns, tool calls with ids, results, decisions and outcome; built directly from OpenAI-format messages. Drafted by Claude; your review is the task below.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Pattern <code>requires_before</code>: action B needs action A earlier in the session.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Pattern <code>argument_limit</code>: a tool argument above or below a value (refund limit).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Pattern <code>claim_needs_action</code>: a judge model lists what the reply <i>says</i> was done, then a plain code check compares that with the tool calls. Built as the phrase version first; a negated phrase is a documented false alarm, and the judge version follows.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Pattern <code>decision_vs_should</code>: over- and under-escalation, against a rule, a judge or a human-labelled sample. Each number says which source it came from.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Pattern <code>consistency</code>: facts in the reply must match the tool results.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Worked example: <code>examples/claims-fnol.yaml</code> (preset, judge, five FNOL rules), built and run by a test.</span></li>
+    <li><span class="pill you">You</span><span>Review <code>examples/claims-fnol.yaml</code> and the <code>Session</code> shape: could an ops person write this without help? Is anything missing from a session?</span></li>
     <li><span class="pill me">Claude</span><span>Run all five on FNOL and clothing-agent traces.</span></li>
   </ul>
 </div>
@@ -933,6 +934,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>18 Oct 2026</td><td>Tier 1 done (presets). Tier 2: <code>Session</code>, the five patterns and the FNOL example built (125 tests); left: your review, and running them on real FNOL and clothing-agent conversations.</td></tr>
 <tr><td>18 Oct 2026</td><td>FNOL CI green end to end, including both images with <code>evalharness</code>; its lint failure from 14 Oct fixed.</td></tr>
 <tr><td>17 Oct 2026</td><td>Tier 1 mostly done: <code>evalharness</code> 0.1.0 (core, four adapters, YAML config, 75 tests, mypy strict), extracted from and re-exported by agent-harness, FNOL wired. Landscape check applied: LLM Guard archived (dropped), Llama Guard gone from Groq (replaced), OTel <code>gen_ai.evaluation.result</code> exists (D12), Langfuse v4 with alerts, Promptfoo owned by OpenAI, Prometheus OTLP flag, LiteLLM sees MCP calls. USP sharpened (T6). D1, D2, D4, D13 taken (T10 to T13).</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Keep it simple: version 1" at the top, version tags on every tier, decision D13.</td></tr>
