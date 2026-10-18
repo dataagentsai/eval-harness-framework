@@ -190,6 +190,7 @@ class ClaimNeedsAction(Pattern):
     comes later."""
 
     kind = "claim_needs_action"
+    obligations = ("AAC-0110",)
 
     def __init__(
         self,
@@ -256,6 +257,7 @@ class DecisionVsShould(Pattern):
     The yardstick is a rule; a judge's or a human's label is another source."""
 
     kind = "decision_vs_should"
+    obligations = ("AAC-0078", "AAC-0043")
 
     def __init__(
         self,
@@ -390,6 +392,7 @@ class Consistency(Pattern):
     repeating the customer's own claim id back is not inventing it."""
 
     kind = "consistency"
+    obligations = ("AAC-0029",)
 
     def __init__(self, *, facts: Mapping[str, str], from_user: bool = True, **base: Any) -> None:
         super().__init__(**base)

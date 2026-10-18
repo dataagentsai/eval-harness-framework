@@ -13,6 +13,7 @@ KEY = "groundedness"
 
 class AzureGroundedness(Adapter):
     kind = "azure_groundedness"
+    obligations = ("AAC-0029",)
     version = "azure-ai-evaluation 1.18.9"
     provider = "azure"
     needs = frozenset({"response", "context"})

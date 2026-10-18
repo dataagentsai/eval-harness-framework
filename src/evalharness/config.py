@@ -64,7 +64,7 @@ def load(path: str | Path) -> dict[str, Adapter]:
 def build(config: Mapping[str, Any]) -> dict[str, Adapter]:
     """Every configured evaluator, built, by its configured name."""
     config = with_preset(config)
-    _only(config, frozenset({"judge", "evaluators"}), "the file")
+    _only(config, frozenset({"judge", "evaluators", "spec"}), "the file")
     judge = _judge(config.get("judge"))
     built: dict[str, Adapter] = {}
     for name, spec in (config.get("evaluators") or {}).items():

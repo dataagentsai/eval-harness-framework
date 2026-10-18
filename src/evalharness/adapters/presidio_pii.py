@@ -48,6 +48,7 @@ def _analyzer(model: str) -> Any:
 
 class PresidioPii(Adapter):
     kind = "presidio_pii"
+    obligations = ("AAC-0006",)
     version = "presidio-analyzer 2.2.364"
     provider = "presidio"
     needs = frozenset({"response"})

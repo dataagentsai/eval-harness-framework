@@ -18,6 +18,7 @@ from evalharness.core import EvalRequest, EvalResult, Scale
 
 class RagasFaithfulness(Adapter):
     kind = "ragas_faithfulness"
+    obligations = ("AAC-0029",)
     version = "ragas 0.4.3"
     provider = "ragas"
     needs = frozenset({"query", "response", "context"})

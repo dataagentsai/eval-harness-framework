@@ -17,6 +17,7 @@ from evalharness.core import EvalRequest, EvalResult, Finding, Scale
 
 class DeepEvalToolCorrectness(Adapter):
     kind = "deepeval_tool_correctness"
+    obligations = ("AAC-0051",)
     version = "deepeval 4.3.1"
     provider = "deepeval"
     needs = frozenset({"tool_calls", "expected"})

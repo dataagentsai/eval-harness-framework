@@ -9,7 +9,7 @@ metric object, a list of entities), so it can be recorded once as a fixture.
 from __future__ import annotations
 
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from typing import Any, ClassVar, Literal
 
@@ -38,6 +38,9 @@ class Adapter:
     default_scale: ClassVar[Scale]
     uses_judge: ClassVar[bool] = False
     stability: ClassVar[Stability] = "alpha"
+    obligations: ClassVar[tuple[str, ...]] = ()
+    """The AI Assurance Catalog obligations (`AAC-####`) this check helps
+    discharge, whatever the agent: what links it to the standard."""
 
     def __init__(
         self,
@@ -46,10 +49,14 @@ class Adapter:
         judge: JudgeModel | None = None,
         scale: Scale | None = None,
         description: str = "",
+        requirements: Sequence[str] = (),
     ) -> None:
         self.name = name or self.kind
         self.description = description
         """The rule in plain words, for reports: what an ops reader sees beside the verdict."""
+        self.requirements = tuple(requirements)
+        """The requirements this rule tests, by id in the team's spec (`P-PAYOUT`,
+        `escalation.injury-reported`): what links it to what must be true."""
         self.judge = judge
         self.scale = scale or self.default_scale
 

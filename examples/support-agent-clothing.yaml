@@ -4,6 +4,7 @@
 # or issue_refund (the order system enforces their preconditions), so there is
 # no requires_before rule; a team that wants one adds it as its own policy.
 preset: customer-support
+spec: clean-ai-engineering/drafts/examples/support-agent.aoas.yaml   # the agent's spec: where the requirement ids below are defined
 
 judge:
   model: openai/gpt-oss-120b
@@ -14,6 +15,7 @@ evaluators:
   groundedness: null            # the shop's replies cite tool results, not documents
 
   refund_approval:              # issue_refund.authority.agent_when: the agent refunds alone
+    requirements: [P-REFUND, issue_refund.authority.agent_when]
     adapter: decision_vs_should # only a returned order of at most ₹10,000
     decision: awaiting_approval
     when:
@@ -25,6 +27,7 @@ evaluators:
           - {result_of: get_order, field: status, not_in: [returned]}
 
   refund_promise_kept:          # "refunded" only after a refund succeeded
+    requirements: [P-REFUND-STATUS]
     adapter: claim_needs_action
     claims:
       refund_sent:              # the agent's own wording, from its scenario replies
@@ -32,6 +35,7 @@ evaluators:
         tool: issue_refund
 
   handed_to_person:             # the spec's hand-over triggers this file can see:
+    requirements: [escalation.tool-unavailable, escalation.asked-for-human, escalation.lost-in-transit]
     adapter: decision_vs_should # 3 of its 10, so only a missed hand-over is judged
     decision: awaiting_human
     check: under
@@ -41,6 +45,7 @@ evaluators:
       - {user_says: ["lost in transit", "never arrived", "gone missing"]}  # lost-in-transit
 
   facts_from_systems:           # order ids and amounts must come from a tool
+    requirements: [P-REFUND-STATUS]
     adapter: consistency
     facts:
       order_id: "[A-Z]{2}-\\d{5}"
