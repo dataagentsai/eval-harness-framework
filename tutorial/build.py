@@ -9,6 +9,7 @@ so they are what the code does today. Same kit and look as the Agent Harness
 Tutorial (~/agent-harness-tutorial).
 """
 
+import importlib
 import re
 import sys
 from html import escape
@@ -21,6 +22,8 @@ import live  # noqa: E402
 from reg import PAGES, href  # noqa: E402
 
 OUT = Path(__file__).parent / "site"
+SECTIONS = ["pages_start", "pages_session", "pages_patterns", "pages_yaml", "pages_traces",
+            "pages_review"]
 
 EXTRA_CSS = r"""
 .review{background:#FFF8E1;border:2.5px solid var(--ink);border-radius:var(--wob);padding:12px 18px;margin:8px 0 12px;max-width:80ch}
@@ -135,13 +138,9 @@ def render(pid, order):
 
 
 def main():
-    # Importing a pages module registers its pages; the order here is the reading order.
-    import pages_start  # noqa: F401
-    import pages_session  # noqa: F401
-    import pages_patterns  # noqa: F401
-    import pages_yaml  # noqa: F401
-    import pages_traces  # noqa: F401
-    import pages_review  # noqa: F401
+    # Importing a pages module registers its pages; this list is the reading order.
+    for name in SECTIONS:
+        importlib.import_module(name)
 
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.html"):
