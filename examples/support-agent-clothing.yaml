@@ -1,0 +1,47 @@
+# The reference agent (a clothing shop's support agent), checked against its own
+# spec (clean-ai-engineering/drafts/examples/support-agent.aoas.yaml). Only what
+# the spec says is a rule here. It does not ask for a lookup before cancel_order
+# or issue_refund (the order system enforces their preconditions), so there is
+# no requires_before rule; a team that wants one adds it as its own policy.
+preset: customer-support
+
+judge:
+  model: openai/gpt-oss-120b
+  base_url: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+
+evaluators:
+  groundedness: null            # the shop's replies cite tool results, not documents
+
+  refund_approval:              # issue_refund.authority.agent_when: the agent refunds alone
+    adapter: decision_vs_should # only a returned order of at most ₹10,000
+    decision: awaiting_approval
+    when:
+      - all:
+          - {tool_called: request_refund}
+          - {result_of: get_order, field: total, above: 10000}
+      - all:
+          - {tool_called: request_refund}
+          - {result_of: get_order, field: status, not_in: [returned]}
+
+  refund_promise_kept:          # "refunded" only after a refund succeeded
+    adapter: claim_needs_action
+    claims:
+      refund_sent:              # the agent's own wording, from its scenario replies
+        phrases: ["has been refunded", "refund is on its way", "refund has been issued"]
+        tool: issue_refund
+
+  handed_to_person:             # the spec's hand-over triggers this file can see:
+    adapter: decision_vs_should # 3 of its 10, so only a missed hand-over is judged
+    decision: awaiting_human
+    check: under
+    when:
+      - {consecutive_failed_at_least: 2}                                  # tool-unavailable
+      - {user_says: ["speak to a person", "talk to a human", "a real person"]}  # asked-for-human
+      - {user_says: ["lost in transit", "never arrived", "gone missing"]}  # lost-in-transit
+
+  facts_from_systems:           # order ids and amounts must come from a tool
+    adapter: consistency
+    facts:
+      order_id: "[A-Z]{2}-\\d{5}"
+      amount: "₹\\s?[\\d,]+"

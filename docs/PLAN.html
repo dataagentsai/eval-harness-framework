@@ -195,7 +195,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill you">You</span><span>Review <code>examples/claims-fnol.yaml</code> and the <code>Session</code> shape: could an ops person write this without help? Is anything missing from a session?</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Run on FNOL's 29 scenarios (48 conversations): fixed the example's guessed tool names, added <code>result_of</code> and <code>all:</code> conditions, a negation guard and customer facts. The 7 findings left are one real gap: a payout is not on the conversation's trace (FINDINGS.md, run 2).</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Fixed the trace gap in the harness (T14): <code>telemetry.work_scope</code>, local tools recorded in full, <code>record.background</code>, work merged into sessions where it happened. All five patterns pass on all 29 FNOL scenarios.</span></li>
-    <li><span class="pill me">Claude</span><span>Run on the clothing agent's scenarios.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Run on the clothing agent's 49 scenarios (85 conversations). Fixed: per-window judging, <code>consecutive_failed_at_least</code>, <code>in</code>/<code>not_in</code>, router hand-overs, negation in the customer's words, both examples rewritten from their specs. All checks pass on both agents (FINDINGS.md, run 3).</span></li>
   </ul>
 </div>
 
@@ -938,6 +938,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>18 Oct 2026</td><td>Clothing-agent run done; examples now written from each agent's spec; all checks pass on both agents. Tier 2 waits only on your review.</td></tr>
 <tr><td>18 Oct 2026</td><td>All open recommendations accepted: D3, D5–D12 are now T15–T23; no decisions open.</td></tr>
 <tr><td>18 Oct 2026</td><td>Trace gap fixed in the harness (T14, was D14); all five patterns pass on all 29 FNOL scenarios.</td></tr>
 <tr><td>18 Oct 2026</td><td>Patterns run on FNOL's 29 scenarios. Found and fixed four weaknesses of ours; found one real gap in FNOL's traces (payouts not on the conversation's trace), decision D14.</td></tr>

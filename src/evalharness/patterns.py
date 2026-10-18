@@ -37,8 +37,28 @@ NEGATIONS: tuple[str, ...] = (
     "yet",
     "cannot",
     "unable",
+    "nobody",
+    "no one",
 )
-"""Words that make a sentence no claim (`claim_needs_action`)."""
+"""Words that make a sentence no claim (`claim_needs_action`), and no request
+or report (`user_says`): "Nobody was hurt" does not report an injury."""
+
+
+def _negation(negations: Sequence[str]) -> re.Pattern[str]:
+    words = "|".join(re.escape(n) for n in negations if n != "n't")
+    return re.compile(rf"\b(?:{words})\b" + (r"|n't\b" if "n't" in negations else ""), re.I)
+
+
+NEGATED = _negation(NEGATIONS)
+
+
+def _plain_sentences(text: str, negated: re.Pattern[str]) -> list[str]:
+    """The sentences of `text` that are neither questions nor negated, lowercased."""
+    return [
+        t.lower()
+        for t in re.split(r"(?<=[.!?])\s+", text)
+        if not t.rstrip().endswith("?") and not negated.search(t)
+    ]
 
 
 class Pattern(Adapter):
@@ -179,13 +199,7 @@ class ClaimNeedsAction(Pattern):
         **base: Any,
     ) -> None:
         super().__init__(**base)
-        self.negated = re.compile(
-            r"(?:\b(?:"
-            + "|".join(re.escape(n) for n in negations if n != "n't")
-            + r")\b)"
-            + (r"|n't\b" if "n't" in negations else ""),
-            re.I,
-        )
+        self.negated = _negation(negations)
         self.claims = {
             name: (tuple(str(p).lower() for p in spec["phrases"]), str(spec["tool"]))
             for name, spec in claims.items()
@@ -197,11 +211,7 @@ class ClaimNeedsAction(Pattern):
         for i, step in enumerate(session.steps):
             if step.kind != "assistant":
                 continue
-            sentences = [
-                t.lower()
-                for t in re.split(r"(?<=[.!?])\s+", step.text)
-                if not t.rstrip().endswith("?") and not self.negated.search(t)
-            ]
+            sentences = _plain_sentences(step.text, self.negated)
             for name, (phrases, tool) in self.claims.items():
                 said = next((p for p in phrases for t in sentences if p in t), None)
                 if said is None:
@@ -220,23 +230,30 @@ class ClaimNeedsAction(Pattern):
 
 # ------------------------------------------------------------------ 4 decision_vs_should
 class DecisionVsShould(Pattern):
-    """Was a decision (such as escalating) made exactly when the rule says it
-    should be? Over: made with no reason. Under: a reason, and not made.
+    """Was a decision (escalating, asking for approval) made exactly when the
+    rules say it should be? Judged per window: the steps since the previous
+    such decision, so what came before a person handed the conversation back
+    does not count toward the next hand-over.
 
-        decision: escalate                  # a `decision` step with this name...
+        decision: awaiting_human            # a `decision` step with this name...
         decision_tool: hand_to_human        # ...or a call to this tool
+        check: both                         # both · under · over
         when:                               # any one of these means it should be made
-          - {tool: issue_refund, field: amount, above: 25000}
+          - {user_says: ["speak to a person"]}
+          - {consecutive_failed_at_least: 2}
           - {failed_calls_at_least: 3}
-          - {user_says: ["speak to a human", "manager"]}
+          - {tool: issue_payout, field: amount, above: 25000}
           - {tool_called: report_fraud}
-          - {result_of: get_claim, field: approved_amount, above: 25000}
+          - {result_of: get_order, field: total, above: 10000}
+          - {result_of: get_order, field: status, not_in: [returned]}
           - all:                            # every one of these at once
-              - {tool_called: request_payout}
-              - {result_of: get_claim, field: approved_amount, above: 25000}
+              - {tool_called: request_refund}
+              - {result_of: get_order, field: status, in: [delivered]}
 
-    The yardstick here is a rule. A judge's or a human's label is a different
-    source, reported as such when those arrive."""
+    Over (made with no reason in its window) can only be judged when `when`
+    holds every trigger the agent's spec has; with some of them, set
+    `check: under`, or a hand-over for a reason not listed reads as needless.
+    The yardstick is a rule; a judge's or a human's label is another source."""
 
     kind = "decision_vs_should"
 
@@ -246,72 +263,116 @@ class DecisionVsShould(Pattern):
         decision: str,
         when: Sequence[Mapping[str, Any]],
         decision_tool: str | None = None,
+        check: str = "both",
         **base: Any,
     ) -> None:
         super().__init__(**base)
+        if check not in ("both", "under", "over"):
+            raise TypeError(f"check must be both, under or over, not {check!r}")
         self.decision, self.decision_tool, self.when = decision, decision_tool, tuple(when)
+        self.check_over, self.check_under = check in ("both", "over"), check in ("both", "under")
         for condition in self.when:
             _known(condition)
 
-    def check(self, session: Session) -> tuple[int, list[Found]]:
-        made = any(
-            (s.kind == "decision" and s.name == self.decision)
-            or (
-                self.decision_tool is not None
-                and s.kind == "tool_call"
-                and s.name == self.decision_tool
-            )
-            for s in session.steps
+    def _made(self, step: Step) -> bool:
+        return (step.kind == "decision" and step.name == self.decision) or (
+            self.decision_tool is not None
+            and step.kind == "tool_call"
+            and step.name == self.decision_tool
         )
-        reasons = [r for c in self.when if (r := self._holds(c, session))]
-        if made and not reasons:
-            return 1, [{"kind": "over", "label": f"{self.decision} with no rule calling for it"}]
-        if reasons and not made:
-            return 1, [{"kind": "under", "label": f"no {self.decision} although {reasons[0]}"}]
-        return 1, []
 
-    @classmethod
-    def _holds(cls, condition: Mapping[str, Any], session: Session) -> str:
-        if "all" in condition:
-            reasons = [cls._holds(c, session) for c in condition["all"]]
-            return " and ".join(reasons) if all(reasons) else ""
-        if "result_of" in condition:
-            for step in session.steps:
-                if (
-                    step.kind != "tool_result"
-                    or step.is_error
-                    or step.name != condition["result_of"]
-                ):
-                    continue
-                found = (
-                    step.result.get(str(condition["field"]))
-                    if isinstance(step.result, Mapping)
-                    else None
+    def check(self, session: Session) -> tuple[int, list[Found]]:
+        found: list[Found] = []
+        windows, start = 0, 0
+        for i, step in enumerate(session.steps):
+            if not self._made(step):
+                continue
+            windows += 1
+            window = session.steps[start:i]
+            if self.check_over and not self._reason(window):
+                found.append(
+                    {
+                        "kind": "over",
+                        "label": f"{self.decision} with no rule calling for it",
+                        "step": i,
+                    }
                 )
-                value = _number(found)
-                if value is not None and value > float(condition["above"]):
-                    return f"{condition['result_of']} returned {condition['field']} = {value:g}"
-        if "tool" in condition:
-            for _, call in session.calls(str(condition["tool"])):
-                value = _number(call.arguments.get(str(condition["field"])))
-                if value is not None and value > float(condition["above"]):
-                    name = f"{condition['tool']}.{condition['field']}"
-                    return f"{name} = {value:g} > {condition['above']}"
-        if "failed_calls_at_least" in condition:
-            failed = sum(1 for s in session.steps if s.kind == "tool_result" and s.is_error)
-            if failed >= int(condition["failed_calls_at_least"]):
-                return f"{failed} tool calls failed"
-        if "user_says" in condition:
-            for s in session.steps:
-                if s.kind == "user":
-                    said = next(
-                        (p for p in condition["user_says"] if p.lower() in s.text.lower()), None
-                    )
-                    if said:
-                        return f"the user said “{said}”"
-        if "tool_called" in condition and session.calls(str(condition["tool_called"])):
-            return f"{condition['tool_called']} was called"
-        return ""
+            start = i + 1
+        rest = session.steps[start:]
+        if rest or windows == 0:
+            windows += 1
+            reason = self._reason(rest)
+            if self.check_under and reason:
+                found.append(
+                    {
+                        "kind": "under",
+                        "label": f"no {self.decision} although {reason}",
+                        "step": len(session.steps),
+                    }
+                )
+        return windows, found
+
+    def _reason(self, window: Sequence[Step]) -> str:
+        return next((r for c in self.when if (r := _holds(c, window))), "")
+
+
+def _holds(condition: Mapping[str, Any], steps: Sequence[Step]) -> str:
+    """Why `condition` holds over `steps`, or "" when it does not."""
+    if "all" in condition:
+        reasons = [_holds(c, steps) for c in condition["all"]]
+        return " and ".join(reasons) if all(reasons) else ""
+    calls = [s for s in steps if s.kind == "tool_call"]
+    results = [s for s in steps if s.kind == "tool_result"]
+    if "result_of" in condition:
+        for step in results:
+            if step.is_error or step.name != condition["result_of"]:
+                continue
+            value = (
+                step.result.get(str(condition["field"]))
+                if isinstance(step.result, Mapping)
+                else None
+            )
+            name = f"{condition['result_of']} returned {condition['field']} = {value}"
+            if "above" in condition:
+                number = _number(value)
+                if number is not None and number > float(condition["above"]):
+                    return name
+            elif "in" in condition:
+                if value in condition["in"]:
+                    return name
+            elif "not_in" in condition and value is not None and value not in condition["not_in"]:
+                return name
+    if "tool" in condition:
+        for call in calls:
+            if call.name != condition["tool"]:
+                continue
+            number = _number(call.arguments.get(str(condition["field"])))
+            if number is not None and number > float(condition["above"]):
+                return (
+                    f"{condition['tool']}.{condition['field']} = {number:g} > {condition['above']}"
+                )
+    if "failed_calls_at_least" in condition:
+        failed = sum(1 for s in results if s.is_error)
+        if failed >= int(condition["failed_calls_at_least"]):
+            return f"{failed} tool calls failed"
+    if "consecutive_failed_at_least" in condition:
+        run = longest = 0
+        for s in results:
+            run = run + 1 if s.is_error else 0
+            longest = max(longest, run)
+        if longest >= int(condition["consecutive_failed_at_least"]):
+            return f"{longest} tool calls failed in a row"
+    if "user_says" in condition:
+        for s in steps:
+            if s.kind != "user":
+                continue
+            plain = _plain_sentences(s.text, NEGATED)
+            said = next((p for p in condition["user_says"] for t in plain if p.lower() in t), None)
+            if said:
+                return f"the user said “{said}”"
+    if "tool_called" in condition and any(c.name == condition["tool_called"] for c in calls):
+        return f"{condition['tool_called']} was called"
+    return ""
 
 
 # ------------------------------------------------------------------ 5 consistency
@@ -361,7 +422,15 @@ class Consistency(Pattern):
 
 
 # ------------------------------------------------------------------ helpers
-CONDITIONS = {"tool", "failed_calls_at_least", "user_says", "tool_called", "result_of", "all"}
+CONDITIONS = {
+    "tool",
+    "failed_calls_at_least",
+    "consecutive_failed_at_least",
+    "user_says",
+    "tool_called",
+    "result_of",
+    "all",
+}
 
 
 def _known(condition: Mapping[str, Any]) -> None:

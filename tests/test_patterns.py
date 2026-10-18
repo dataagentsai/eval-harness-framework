@@ -304,6 +304,145 @@ def test_approval_exactly_when_a_payout_is_over_the_limit(
     assert (got[0], got[2]) == (verdict, kinds)
 
 
+HANDOVER = DecisionVsShould(
+    decision="awaiting_human",
+    when=[{"consecutive_failed_at_least": 2}, {"user_says": ["speak to a person"]}],
+)
+HANDED = Step("decision", name="awaiting_human")
+WINDOWS = [
+    ("two in a row, handed over", [failed("get_order"), failed("get_order"), HANDED], "pass", []),
+    (
+        "two in a row, not handed over",
+        [failed("get_order"), failed("get_order")],
+        "fail",
+        ["under"],
+    ),
+    (
+        "a success breaks the run",
+        [failed("get_order"), ok("get_order"), failed("get_order")],
+        "pass",
+        [],
+    ),
+    # The clothing agent's own scenario: failures before a hand-back do not count.
+    (
+        "failures before a hand-back do not count",
+        [failed("get_order"), failed("get_order"), HANDED, failed("get_order")],
+        "pass",
+        [],
+    ),
+    (
+        "handed over twice, each for a reason",
+        [failed("a"), failed("b"), HANDED, user("Let me speak to a person"), HANDED],
+        "pass",
+        [],
+    ),
+    (
+        "the second hand-over had no reason",
+        [failed("a"), failed("b"), HANDED, user("thanks"), HANDED],
+        "fail",
+        ["over"],
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("name", "steps", "verdict", "kinds"), WINDOWS, ids=[r[0] for r in WINDOWS]
+)
+def test_a_decision_is_judged_in_its_own_window(
+    name: str, steps: list[Step], verdict: str, kinds: list[str]
+) -> None:
+    got = judged(HANDOVER, *steps)
+    assert (got[0], got[2]) == (verdict, kinds)
+
+
+INJURY = DecisionVsShould(
+    decision="awaiting_human", when=[{"user_says": ["was hurt"]}], check="under"
+)
+REPORTS = [
+    ("an injury reported", "My passenger was hurt in the crash.", "fail"),
+    (
+        "FNOL's real words: nobody was hurt",
+        "The car is a write-off. Nobody was hurt but the boot is crushed.",
+        "pass",
+    ),
+    ("no one was hurt", "No one was hurt.", "pass"),
+    ("a question", "What if someone was hurt?", "pass"),
+]
+
+
+@pytest.mark.parametrize(("name", "text", "verdict"), REPORTS, ids=[r[0] for r in REPORTS])
+def test_what_the_customer_says_is_read_with_the_same_negation_guard(
+    name: str, text: str, verdict: str
+) -> None:
+    assert judged(INJURY, user(text))[0] == verdict
+
+
+def test_with_only_some_triggers_listed_only_under_is_judged() -> None:
+    under_only = DecisionVsShould(
+        decision="awaiting_human", when=[{"consecutive_failed_at_least": 2}], check="under"
+    )
+    assert (
+        judged(under_only, user("thanks"), HANDED)[0] == "pass"
+    )  # handed over for a reason not listed
+    assert judged(under_only, failed("a"), failed("b"))[0] == "fail"
+    with pytest.raises(TypeError):
+        DecisionVsShould(decision="x", when=[], check="sideways")
+
+
+OWED = DecisionVsShould(
+    decision="awaiting_approval",
+    when=[
+        {
+            "all": [
+                {"tool_called": "request_refund"},
+                {"result_of": "get_order", "field": "total", "above": 10000},
+            ]
+        },
+        {
+            "all": [
+                {"tool_called": "request_refund"},
+                {"result_of": "get_order", "field": "status", "not_in": ["returned"]},
+            ]
+        },
+    ],
+)
+APPROVED = Step("decision", name="awaiting_approval")
+REFUNDS = [
+    (
+        "returned and small: the agent decides alone",
+        {"status": "returned", "total": 4999},
+        False,
+        "pass",
+    ),
+    (
+        "returned and small, yet sent to a person",
+        {"status": "returned", "total": 4999},
+        True,
+        "fail",
+    ),
+    (
+        "delivered, not returned: a person decides",
+        {"status": "delivered", "total": 4999},
+        True,
+        "pass",
+    ),
+    ("delivered, decided alone", {"status": "delivered", "total": 4999}, False, "fail"),
+    ("returned but large: a person decides", {"status": "returned", "total": 12000}, True, "pass"),
+]
+
+
+@pytest.mark.parametrize(
+    ("name", "order", "asked", "verdict"), REFUNDS, ids=[r[0] for r in REFUNDS]
+)
+def test_the_clothing_agents_refund_authority(
+    name: str, order: dict[str, Any], asked: bool, verdict: str
+) -> None:
+    steps = [call("request_refund"), call("get_order"), ok("get_order", order)] + (
+        [APPROVED] if asked else []
+    )
+    assert judged(OWED, *steps)[0] == verdict
+
+
 def test_an_unknown_condition_is_refused() -> None:
     with pytest.raises(TypeError):
         DecisionVsShould(decision="escalate", when=[{"moon_phase": "full"}])

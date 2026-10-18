@@ -34,12 +34,14 @@ evaluators:
         phrases: ["has been paid", "has been issued", "has been made to the account"]
         tool: issue_payout
 
-  handed_to_person:             # a person takes over exactly when the rules say so
-    adapter: decision_vs_should
-    decision: awaiting_human
+  handed_to_person:             # the spec's hand-over triggers this file can see
+    adapter: decision_vs_should # (AOAS policies.escalation): 3 of its 10, so only
+    decision: awaiting_human    # a missed hand-over is judged, not a needless one
+    check: under
     when:
-      - {failed_calls_at_least: 3}
-      - {user_says: ["speak to a person", "talk to a human", "complaint"]}
+      - {consecutive_failed_at_least: 2}                      # tool-unavailable
+      - {user_says: ["speak to a person", "talk to a human"]} # asked-for-human
+      - {user_says: ["injured", "was hurt", "got hurt"]}      # injury-reported
 
   facts_from_systems:           # claim ids and amounts must come from a tool
     adapter: consistency

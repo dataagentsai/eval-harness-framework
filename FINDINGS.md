@@ -167,3 +167,38 @@ announced before it was made; placing it by time window fixed that.
 
 Suites: reference-agent 2,107 passed with the same 2 earlier failures; FNOL 755
 passed.
+
+---
+
+# Run 3: the clothing agent, and the examples checked against each spec (18 Oct 2026)
+
+`scripts/patterns_on_scenarios.py` over the reference agent's 49 scenarios: 141
+turns, 85 conversations. As with FNOL, every scenario passes the agent's own
+gates, so each finding was traced to its cause, this time against the agent's
+spec (`clean-ai-engineering/drafts/examples/support-agent.aoas.yaml`).
+
+| Finding | Cause | Fixed where |
+|---|---|---|
+| Approval asked for a ₹4,999 refund, "with no rule calling for it" | The example had half the rule. The spec lets the agent refund alone only a **returned** order of at most ₹10,000; a delivered order needs a person whatever its total. | `result_of` conditions gained `in` and `not_in`; the example now says both halves. |
+| "No hand-over although 3 tool calls failed" | Two mistakes of ours. The spec's trigger is **2 failures in a row** (`tool-unavailable`); "three failed attempts" is listed as *deferred*. And failures before a person hands the conversation back do not count: that is what the scenario tests, and the agent is right. | `decision_vs_should` is judged **per window** (the steps since the previous such decision) and gained `consecutive_failed_at_least`. |
+| The router's hand-over was not seen | A turn the router escalated by rule has `result: escalated` and no termination | `agent_harness.watch.sessions` records it as `awaiting_human` (reference-agent). |
+| "Cancelled without looking the order up" | A rule of ours, not the spec's: the order system enforces cancel's preconditions | Removed from the example; a team may add it as its own policy. |
+| FNOL: "no hand-over although the user said *was hurt*" | "Nobody was hurt" | The negation guard now reads the customer's words too (`user_says`), and knows "nobody" and "no one". |
+
+**A rule about rules came out of this:** a hand-over pattern that lists only some
+of the spec's triggers can judge only a *missed* hand-over. A hand-over for a
+reason it doesn't list would look needless. So `decision_vs_should` takes
+`check: under`, and both examples use it, since each lists 3 of its spec's 10
+triggers.
+
+**Result:** all checks pass on both agents with nothing left to explain. On the
+clothing agent: 85 conversations judged for approvals and hand-overs, 3 refund
+promises, 10 conversations stating order ids or amounts. FNOL's example gained the
+same correction (2 failures in a row, not 3 in all) and still passes on all 48.
+
+**What the three runs together say:** of every finding on two agents, one was a
+real defect (FNOL's payouts missing from the conversation's trace, now fixed).
+All the others were ours: the patterns' first versions (negation, windows,
+customer facts) and examples written from guesses instead of from each agent's
+spec. The second lesson is the more useful one for adoption: **write a domain's
+rules from its spec, and say which part of the spec a rule covers.**
