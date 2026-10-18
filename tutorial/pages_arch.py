@@ -76,7 +76,8 @@ already uses. It has no database, dashboard or chat window of its own.</p>
 ])}
 {note("What's built today", "<p>The engine's check step, the five patterns, four provider checks, and reading traces from a trace file (way 3). The reference agent's own harness already runs checks inline (way 1) using this package. Running <i>any</i> check at the gateway, inline in other frameworks, and writing results back are planned: see " + link("arch-integrations", "every integration") + ".</p>")}
 {review("arch", "The big picture", [
-    "Does this drawing show what we're trying to do? What would you add or remove before showing it to a client?",
+    ("Does this drawing show what we're trying to do? What would you add or remove before showing it to a client?",
+     "Yes. For a client, drop the tier labels and keep the four ways in."),
 ])}
 """
 
@@ -157,7 +158,8 @@ check in a fast place. Measured: DeepEval's “deterministic” check takes abou
 so it's online, not inline; Presidio takes about 2 s on its first call, so an inline host must warm it up.</p></div>
 {table(["Check", "Provider", "Speed class", "Expected time"], rows)}
 {review("arch-modes", "Offline, inline, online", [
-    "Is the three-timings explanation clear enough for an ops lead deciding where a rule should run?",
+    ("Is the three-timings explanation clear enough for an ops lead deciding where a rule should run?",
+     "Yes. The comparison table is the one-slide version."),
 ])}
 """
 

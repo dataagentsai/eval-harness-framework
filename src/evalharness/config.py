@@ -31,6 +31,8 @@ import yaml
 from evalharness.adapter import Adapter
 from evalharness.adapters import ADAPTERS
 from evalharness.core import Scale
+from evalharness.hooks import POSITIONS, Hooks
+from evalharness.hooks import check as as_hook
 from evalharness.judge_model import JudgeModel
 from evalharness.patterns import PATTERNS
 
@@ -39,6 +41,8 @@ KINDS = {**ADAPTERS, **PATTERNS}
 PRESETS = Path(__file__).parent / "presets"
 
 SCALE_FIELDS = frozenset({"raw_min", "raw_max", "higher_is_better", "threshold"})
+PLACEMENT = ("at", "tools", "side_effects", "on_fail")
+"""Where a rule runs inline: the moment, which tools, and what a fail does."""
 
 
 class ConfigRefused(ValueError):
@@ -73,11 +77,41 @@ def build(config: Mapping[str, Any]) -> dict[str, Adapter]:
         if cls.uses_judge and judge is None:
             raise ConfigRefused(f"{name!r} ({cls.kind}) needs a judge; none is configured")
         scale = _scale(spec.pop("scale", None), name)
+        placement = {k: spec.pop(k) for k in PLACEMENT if k in spec}
         try:
             built[name] = cls(name=name, judge=judge, scale=scale, **spec)
         except TypeError as wrong:
             raise ConfigRefused(f"{name!r} ({cls.kind}): {wrong}") from None
+        built[name].placement = _placement(placement, name)
     return built
+
+
+def load_hooks(path: str | Path) -> Hooks:
+    """The rules a file places inline (`at:`), as hooks for a loop of your own."""
+    hooks = Hooks()
+    for name, check_ in load(path).items():
+        where = check_.placement
+        if where:
+            hooks.add(
+                where["at"],
+                as_hook(check_, on_fail=where.get("on_fail", "block")),
+                tools=where.get("tools", ()),
+                side_effects=where.get("side_effects", ()),
+                name=name,
+            )
+    return hooks
+
+
+def _placement(spec: Mapping[str, Any], name: str) -> dict[str, Any]:
+    if not spec:
+        return {}
+    if spec.get("at") not in POSITIONS:
+        raise ConfigRefused(f"{name}.at must be one of {', '.join(POSITIONS)}")
+    if spec.get("on_fail", "block") not in ("block", "escalate", "allow"):
+        raise ConfigRefused(f"{name}.on_fail must be block, escalate or allow")
+    if spec.get("tools") and spec["at"] not in ("pre_tool", "post_tool"):
+        raise ConfigRefused(f"{name}.tools is for pre_tool and post_tool only")
+    return {k: tuple(v) if isinstance(v, list) else v for k, v in spec.items()}
 
 
 def with_preset(config: Mapping[str, Any]) -> dict[str, Any]:

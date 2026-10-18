@@ -60,8 +60,10 @@ wording on these pages is looked up in the spec when they're built, so it can't 
 {table(["Agent", "Requirements in its spec", "Tested by a rule", "Share"], rows)}
 {note("Why coverage is low, and why that's fine for now", "<p>Many requirements are about what the agent's systems refuse (the claims system won't register a claim on a lapsed policy), and are tested in the agent's own scenarios, not after the fact. Others need checks we haven't built (a date promised in a reply). Each untested requirement is listed by name on the agent's page, so the gap is known and owned.</p>")}
 {review("requirements", "Requirements", [
-    "Should every rule be required to name at least one requirement, so no rule exists without a reason?",
-    "Which untested FNOL requirements matter most to check after the fact?",
+    ("Should every rule be required to name at least one requirement, so no rule exists without a reason?",
+     "Yes, as a warning rather than a refusal until a team has a spec. FNOL and the clothing agent already comply."),
+    ("Which untested FNOL requirements matter most to check after the fact?",
+     "P-PAYOUT-OWED (pay when asked; a status question issues nothing), P-OWN-WORDS (act only on a named claim), P-OWNERSHIP, and the “never a date” half of P-CLAIM-STATUS."),
 ])}
 """
 

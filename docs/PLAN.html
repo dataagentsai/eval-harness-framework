@@ -132,7 +132,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#t0"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 0</b>Spike: one shape, four providers</a>
   <a href="#t1"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 1</b>Verified landscape + core package</a>
   <a href="#t2"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 2</b>Sessions + domain patterns</a>
-  <a href="#t3"><span class="pill next">Planned</span> <span class="pill me">v2</span><b>Tier 3</b>Positions + the decide step</a>
+  <a href="#t3"><span class="pill doing">In progress</span> <span class="pill me">v2</span><b>Tier 3</b>Positions + the decide step</a>
   <a href="#t4"><span class="pill doing">In progress</span> <span class="pill me">v1 (pull only)</span><b>Tier 4</b>OpenTelemetry in and out</a>
   <a href="#t5"><span class="pill next">Planned</span> <span class="pill me">v1 (6 built rules)</span><b>Tier 5</b>Cost pack (36 rules)</a>
   <a href="#t6"><span class="pill next">Planned</span> <span class="pill me">v1 (Presidio only)</span><b>Tier 6</b>Security pack</a>
@@ -202,10 +202,11 @@ svg #ah path{fill:var(--muted)}
 </div>
 
 <div class="card" id="t3">
-  <div class="tierhead"><h3>Tier 3 · The five inline moments and the decide step</h3><span class="pill next">Planned</span></div>
+  <div class="tierhead"><h3>Tier 3 · The five inline moments and the decide step</h3><span class="pill doing">In progress</span></div>
   <p>The harness already has the five inline positions (<code>pre_model</code>, <code>post_model</code>, <code>pre_tool</code>, <code>post_tool</code>, <code>reply</code>). This tier lets any adapter run at them, and separates checking from deciding, so the same check can block in one deployment and only alert in another.</p>
   <ul class="tasks">
-    <li><span class="pill me">Claude</span><span>Run any adapter, ours or a provider's, at any of the five positions, with a time budget per position.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Run any check at any of the five moments: <code>evalharness.hooks</code> (T29), with matchers per tool, per pattern or per kind of tool, placed in code or YAML; <code>check(...)</code> turns any check into a hook.</span></li>
+    <li><span class="pill me">Claude</span><span>A time budget per moment, fail-closed when a hook breaks, and every decision recorded on the trace.</span></li>
     <li><span class="pill me">Claude</span><span><code>Policy</code> port: results become one action (allow, redact, block, escalate, alert, fail the release).</span></li>
     <li><span class="pill me">Claude</span><span>Fail-open or fail-closed set per position in YAML.</span></li>
     <li><span class="pill me">Claude</span><span>Rule modes: off, shadow, alert, block. A rule moves up only with measured precision and an owner.</span></li>
@@ -374,6 +375,7 @@ svg #ah path{fill:var(--muted)}
 <tr><td>T26</td><td>Every rule takes a plain <code>description</code>; ready-made fact types replace hand-written regular expressions</td><td>An ops person should be able to write and read the rules file. From the tutorial review.</td><td>18 Oct</td></tr>
 <tr><td>T27</td><td>No hand-over proposal to OpenTelemetry until a second team needs it; meanwhile a team maps its own attribute in YAML</td><td>One team's need is not yet a standard. From the tutorial review.</td><td>18 Oct</td></tr>
 <tr><td>T28</td><td>Trace sources in this order: OTLP file (built), Phoenix, App Insights, Langfuse</td><td>App Insights is where the Azure clients and FNOL already are. From the tutorial review.</td><td>18 Oct</td></tr>
+<tr><td>T29</td><td>Inline hooks: the loop only reports the moment (five calls to <code>Hooks.run</code>); each hook carries a matcher (tool name, pattern such as <code>issue_*</code>, or kind of tool such as <code>irreversible</code>); one decision type (allow, modify, block, escalate); first block wins. Placed by decorator or in YAML (<code>at</code>, <code>tools</code>, <code>on_fail</code>). Framework and gateway adapters only translate their hook into an Event.</td><td>Borrowed from Claude Code's PreToolUse/PostToolUse matchers, the agent SDKs' guardrails and LiteLLM's pre/post-call guardrails. Targeting one tool never touches the loop; matching by kind covers new tools. Your question, 19 Oct.</td><td>19 Oct</td></tr>
 </table></div>
 
 <h4>Open</h4>
@@ -947,6 +949,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>19 Oct 2026</td><td>Tier 3 started: <code>evalharness.hooks</code> for a loop of your own (T29), YAML placement (<code>at</code>, <code>tools</code>, <code>on_fail</code>), any check usable as a hook; tutorial page “Hooks in a loop of your own”. 8 more review questions decided on your recommendation. 236 tests.</td></tr>
 <tr><td>18 Oct 2026</td><td>Tutorial grew to 33 pages: Architecture (where it fits, offline/inline/online with every injection point, every integration, the ports, what we ship on top of each tool), Catalog (118 obligations, 36 cost rules, 56 warning signs, domain rules), Requirements (each rule names the spec ids it tests; FNOL 8 of 42 tested, clothing 6 of 42), Design (ideas, classes, every decision). Code: <code>requirements</code> on rules, <code>spec</code> on a team file, <code>obligations</code> on checks, <code>evalharness.requirements</code>, saved questions (<code>evalharness.questions</code>: under/over-escalations and four more, deterministic). 213 tests.</td></tr>
 <tr><td>18 Oct 2026</td><td>Tier 2 done: your review through the tutorial; 17 recommendations accepted as T24–T28; step times, <code>human</code> replies, <code>blocked</code> decisions and rule descriptions built (183 tests).</td></tr>
 <tr><td>18 Oct 2026</td><td>Tutorial added (<code>tutorial/</code>, 18 pages, same hand-drawn kit as the Agent Harness Tutorial): sessions, the five patterns with live pass/fail runs, the FNOL rules file, traces to verdict. Review questions collected on one page. Published at cleandataengineering.ai/learn/eval-harness/ after your approval (republish: <code>tutorial/build.py --publish ~/cleandataengineering-site/learn/eval-harness</code>).</td></tr>

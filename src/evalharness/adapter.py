@@ -54,6 +54,8 @@ class Adapter:
         self.name = name or self.kind
         self.description = description
         """The rule in plain words, for reports: what an ops reader sees beside the verdict."""
+        self.placement: dict[str, Any] = {}
+        """Where the file places it inline (`at`, `tools`, `on_fail`); empty when not."""
         self.requirements = tuple(requirements)
         """The requirements this rule tests, by id in the team's spec (`P-PAYOUT`,
         `escalation.injury-reported`): what links it to what must be true."""

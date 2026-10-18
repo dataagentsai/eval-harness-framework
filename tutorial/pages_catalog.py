@@ -61,8 +61,10 @@ must be true of an AI system. {len(core)} apply to every AI system; {len(kind)} 
 ])}
 {note("Read the gaps honestly", "<p>Most obligations aren't covered by a check here yet, and that's expected: many are tested before release (golden sets, red-teaming), some belong to the platform (identity, network), and the framework is young. Every “—” on these pages is a known, named gap, not a hidden one.</p>")}
 {review("catalog", "The catalog", [
-    "Is “any agent / by kind of agent / for one business” the right way to sort checks for a client conversation?",
-    "Which gaps should we close first: the core obligations, the cost rules, or more domain requirements?",
+    ("Is “any agent / by kind of agent / for one business” the right way to sort checks for a client conversation?",
+     "Yes, keep the three layers."),
+    ("Which gaps should we close first: the core obligations, the cost rules, or more domain requirements?",
+     "Domain requirements first (that's what a client pays for), then the cost rules (Tier 5), then the core obligations that can be checked after the fact."),
 ])}
 """
 

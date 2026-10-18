@@ -14,7 +14,7 @@ def review_page():
     total = sum(len(r[2]) for r in REVIEWS)
     open_ = sum(1 for r in REVIEWS for q in r[2] if not isinstance(q, tuple))
     status = (f"{open_} of {total} questions are open." if open_
-              else f"All {total} questions are decided (18 Oct 2026: you accepted my recommendations).")
+              else f"All {total} questions are decided (you accepted my recommendations on 18 and 19 Oct 2026).")
     return f"""
 <div class="text"><p>{status} Each links back to the page that explains it.
 Open questions are answered in chat with the page name and the number, for

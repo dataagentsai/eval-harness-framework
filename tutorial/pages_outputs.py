@@ -92,8 +92,10 @@ conversations when this page was built. Then the two saved questions were answer
 {rows(over)}
 {note("Why this matters", "<p>The same three conversations will always give exactly these rows, whoever asks and however they phrase it. That's what lets a weekly report, a dashboard panel and a chat answer agree with each other.</p>")}
 {review("arch-outputs", "On top of your tools", [
-    "Which saved questions would an ops lead ask first? Six are built in; what's missing from the list?",
-    "For a LangSmith client, is “results as feedback, alerts and saved filters from our templates, chat through MCP” the right offer?",
+    ("Which saved questions would an ops lead ask first? Six are built in; what's missing from the list?",
+     "Under- and over-escalations and promises not kept first, then actions without a prerequisite. Add next: “a tool kept failing and nobody took over”."),
+    ("For a LangSmith client, is “results as feedback, alerts and saved filters from our templates, chat through MCP” the right offer?",
+     "Yes: results as feedback on the same run, alert and saved-filter templates, the chat through MCP. No LangSmith dashboard template."),
 ])}
 <p class="deeper">Source: <code>src/evalharness/questions.py</code>. The conversation design is in {link("arch", "Architecture")} and PLAN.html.</p>
 """
