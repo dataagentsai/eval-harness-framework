@@ -1,0 +1,13 @@
+# customer-support: version 1's checks for a support agent, run after the fact.
+#
+# A team's evaluators.yaml names this preset, then adds what only it knows:
+#   - its judge model (required: judged checks refuse to start without one,
+#     because for client data the judge must be the client's own model);
+#   - its domain patterns (tool names and limits; see evalharness.patterns).
+# Any check here can be changed field by field, or removed with `null`.
+evaluators:
+  pii:
+    adapter: presidio_pii
+  groundedness:
+    adapter: azure_groundedness
+    scale: {raw_min: 1, raw_max: 5, higher_is_better: true, threshold: 3}

@@ -32,6 +32,11 @@ from evalharness.adapter import Adapter
 from evalharness.adapters import ADAPTERS
 from evalharness.core import Scale
 from evalharness.judge_model import JudgeModel
+from evalharness.patterns import PATTERNS
+
+KINDS = {**ADAPTERS, **PATTERNS}
+"""Every buildable check: provider adapters and our domain patterns."""
+PRESETS = Path(__file__).parent / "presets"
 
 SCALE_FIELDS = frozenset({"raw_min", "raw_max", "higher_is_better", "threshold"})
 
@@ -42,10 +47,10 @@ class ConfigRefused(ValueError):
 
 def adapter_class(kind: str) -> type[Adapter]:
     try:
-        module, cls = ADAPTERS[kind].split(":")
+        module, cls = KINDS[kind].split(":")
     except KeyError:
         raise ConfigRefused(
-            f"unknown adapter {kind!r}; known: {', '.join(sorted(ADAPTERS))}"
+            f"unknown adapter {kind!r}; known: {', '.join(sorted(KINDS))}"
         ) from None
     found = getattr(importlib.import_module(module), cls)
     assert isinstance(found, type) and issubclass(found, Adapter)
@@ -58,6 +63,7 @@ def load(path: str | Path) -> dict[str, Adapter]:
 
 def build(config: Mapping[str, Any]) -> dict[str, Adapter]:
     """Every configured evaluator, built, by its configured name."""
+    config = with_preset(config)
     _only(config, frozenset({"judge", "evaluators"}), "the file")
     judge = _judge(config.get("judge"))
     built: dict[str, Adapter] = {}
@@ -72,6 +78,28 @@ def build(config: Mapping[str, Any]) -> dict[str, Adapter]:
         except TypeError as wrong:
             raise ConfigRefused(f"{name!r} ({cls.kind}): {wrong}") from None
     return built
+
+
+def with_preset(config: Mapping[str, Any]) -> dict[str, Any]:
+    """The team's file laid over its preset: a check the team names replaces the
+    preset's field by field; a check set to `null` is removed; the team's judge
+    wins. Without `preset`, the file as it is."""
+    config = dict(config)
+    name = config.pop("preset", None)
+    if name is None:
+        return config
+    path = PRESETS / f"{name}.yaml"
+    if not path.is_file():
+        known = ", ".join(sorted(p.stem for p in PRESETS.glob("*.yaml")))
+        raise ConfigRefused(f"unknown preset {name!r}; known: {known}")
+    base = yaml.safe_load(path.read_text()) or {}
+    evaluators = {k: dict(v) for k, v in (base.get("evaluators") or {}).items()}
+    for key, spec in (config.get("evaluators") or {}).items():
+        if spec is None:
+            evaluators.pop(key, None)
+        else:
+            evaluators[key] = {**evaluators.get(key, {}), **spec}
+    return {**base, **config, "evaluators": evaluators}
 
 
 def _judge(spec: Mapping[str, Any] | None) -> JudgeModel | None:

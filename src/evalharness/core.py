@@ -41,10 +41,12 @@ NEEDS = (
     "tool_definitions",
     "context",
     "expected",
+    "session",
 )
 """Every input an evaluator may declare it needs: the request's fields, with
 the response's tool calls and results named apart because a reply can be
-judged on its text where its tools were not recorded."""
+judged on its text where its tools were not recorded. `session` is the whole
+conversation, for checks no single turn can answer."""
 
 
 class ToolCallLike(Protocol):
@@ -118,6 +120,109 @@ class Meta:
     """Whose turn it was (the customer id). Never sent to a vendor evaluator."""
 
 
+StepKind = Literal["user", "assistant", "tool_call", "tool_result", "decision"]
+
+
+@dataclass(frozen=True)
+class Step:
+    """One thing that happened in a session, in order.
+
+    A `decision` is something the agent or the harness decided outside a tool
+    call, such as `escalate`; a host records it under that name."""
+
+    kind: StepKind
+    name: str = ""
+    """The tool's name for a call or result; the decision's name for a decision."""
+    text: str = ""
+    arguments: Mapping[str, object] = field(default_factory=dict)
+    result: object = None
+    """A tool result's structured content."""
+    call_id: str = ""
+    """Pairs a result with its call, where the host records it."""
+    is_error: bool = False
+    turn: int = 0
+
+
+@dataclass(frozen=True)
+class Session:
+    """A whole conversation: what the session-level checks read."""
+
+    id: str
+    steps: tuple[Step, ...]
+    outcome: str = ""
+    """How it ended, in the host's words: `resolved`, `abandoned`, `escalated`."""
+
+    def calls(self, name: str | None = None) -> tuple[tuple[int, Step], ...]:
+        """Tool calls, with their position in `steps`, optionally one tool's only."""
+        return tuple(
+            (i, s)
+            for i, s in enumerate(self.steps)
+            if s.kind == "tool_call" and (name is None or s.name == name)
+        )
+
+    def succeeded(self, index: int) -> bool:
+        """Whether the call at `index` has a result that is not an error. A
+        result is paired by call id where recorded, else the next one by name."""
+        call = self.steps[index]
+        for later in self.steps[index + 1 :]:
+            if later.kind != "tool_result":
+                continue
+            if (call.call_id and later.call_id == call.call_id) or (
+                not call.call_id and later.name == call.name
+            ):
+                return not later.is_error
+        return False
+
+    @classmethod
+    def from_messages(
+        cls, id: str, messages: tuple[Mapping[str, Any], ...] | list[Mapping[str, Any]]
+    ) -> Session:
+        """From OpenAI-format chat messages, which most frameworks can export."""
+        import json
+
+        steps: list[Step] = []
+        turn = 0
+        for m in messages:
+            role = m.get("role")
+            if role == "user":
+                turn += 1
+                steps.append(Step("user", text=str(m.get("content") or ""), turn=turn))
+            elif role == "assistant":
+                if m.get("content"):
+                    steps.append(Step("assistant", text=str(m["content"]), turn=turn))
+                for call in m.get("tool_calls") or ():
+                    fn = call.get("function", {})
+                    raw = fn.get("arguments") or "{}"
+                    arguments = json.loads(raw) if isinstance(raw, str) else dict(raw)
+                    steps.append(
+                        Step(
+                            "tool_call",
+                            name=str(fn.get("name", "")),
+                            arguments=arguments,
+                            call_id=str(call.get("id", "")),
+                            turn=turn,
+                        )
+                    )
+            elif role == "tool":
+                content = m.get("content")
+                try:
+                    result: object = json.loads(content) if isinstance(content, str) else content
+                except ValueError:
+                    result = content
+                steps.append(
+                    Step(
+                        "tool_result",
+                        name=str(m.get("name", "")),
+                        text=content if isinstance(content, str) else "",
+                        result=result,
+                        call_id=str(m.get("tool_call_id", "")),
+                        is_error=bool(m.get("is_error", False)),
+                        turn=turn,
+                    )
+                )
+        return cls(id=id, steps=tuple(steps))
+
+
 @dataclass(frozen=True)
 class EvalRequest:
     """What every evaluator is handed. Conversation and tools in OpenAI's
@@ -130,6 +235,8 @@ class EvalRequest:
     """The tools this customer was allowed, as OpenAI function definitions."""
     context: tuple[Passage, ...] | None = None
     expected: Expected | None = None
+    session: Session | None = None
+    """The whole conversation, where a check judges more than one turn."""
     meta: Meta = field(default_factory=Meta)
 
     def provides(self) -> frozenset[str]:
@@ -144,6 +251,7 @@ class EvalRequest:
             "tool_definitions": self.tool_definitions is not None,
             "context": self.context is not None,
             "expected": self.expected is not None,
+            "session": self.session is not None,
         }
         return frozenset(name for name, here in present.items() if here)
 
