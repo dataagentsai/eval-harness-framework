@@ -212,7 +212,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span><code>StateStore</code> port for running totals (budgets, rate counts, repeat calls). In-memory for tests, Redis for production.</span></li>
     <li><span class="pill me">Claude</span><span>Inline results written onto the trace with rule id and version, so online doesn't judge them twice.</span></li>
     <li><span class="pill me">Claude</span><span>Redaction applies the positions from Presidio's findings.</span></li>
-    <li><span class="pill you">You</span><span>Decision D8: are streaming checks needed?</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Decision: no streaming checks for now (T19).</span></li>
   </ul>
 </div>
 
@@ -229,7 +229,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Tail-style sampling for online checks: errors, blocks, escalations, high cost and new prompt versions first, then a random baseline.</span></li>
     <li><span class="pill me">Claude</span><span>Agent name, version, environment and prompt version on every result.</span></li>
     <li><span class="pill me">Claude</span><span><code>ResultSink</code> adapter: results as OTel <code>gen_ai.evaluation.result</code> events on the judged span, plus metrics.</span></li>
-    <li><span class="pill you">You</span><span>Decision D6 (tap or pull first). D4 is taken: Phoenix locally (T12).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Decisions: pull first (T17), Phoenix locally (T12).</span></li>
   </ul>
 </div>
 
@@ -297,7 +297,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Metric definitions such as "obligation failure rate", "promise not kept", "eval cost share", in Cube and in Databricks Metric Views.</span></li>
     <li><span class="pill me">Claude</span><span>MCP server with <code>list_metrics</code>, <code>query</code>, <code>compare</code>, <code>top_findings</code>, <code>explain_finding</code>. Read-only, runs as the asking user, never writes SQL.</span></li>
     <li><span class="pill both">Together</span><span>Test from Claude and from Teams with your ops-style questions.</span></li>
-    <li><span class="pill you">You</span><span>Decision D7: the MCP server as the conversation layer.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Decision: the MCP server is the conversation layer (T18).</span></li>
   </ul>
 </div>
 
@@ -356,20 +356,21 @@ svg #ah path{fill:var(--muted)}
 <tr><td>T12</td><td>Phoenix as the local backend (was D4)</td><td>One Python process; self-hosted Langfuse needs four services.</td><td>17 Oct</td></tr>
 <tr><td>T13</td><td>Build version 1 (the simple slice) first (was D13)</td><td>Tests whether teams find real problems before we build inline, alerts and integrations.</td><td>17 Oct</td></tr>
 <tr><td>T14</td><td>Fix FNOL's trace gap in the harness (was D14): approvals' work carries the conversation's id; local tools record what they did</td><td>Done the same day. All five patterns now pass on all 29 FNOL scenarios with nothing left to explain.</td><td>18 Oct</td></tr>
+<tr><td>T15</td><td>Inline checks run first in framework hooks; LiteLLM second, for non-Python agents (was D3)</td><td>Only framework hooks see tool calls. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T16</td><td>Metric definitions first for Cube (open track) and Databricks Metric Views (Databricks clients) (was D5)</td><td>Follows the earlier "by track" choice. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T17</td><td>Online checks read traces from where they land (pull) first; a Collector copy (tap) second (was D6)</td><td>Works with existing projects and allows backfill. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T18</td><td>The conversation layer is one small MCP server over the client's semantic layer; no UI of our own (was D7)</td><td>Any chat surface can use it. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T19</td><td>No checking of replies while they stream, for now (was D8)</td><td>FNOL and clothing don't stream to the customer; revisit when an agent does. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T20</td><td>Carry the work after results land, scoped: jobs once against ports, a five-method adapter per tool, a short supported list, steps 1–6 first (was D9)</td><td>Keeps the loop's work bounded. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T21</td><td>Trial two cost rules as a dbt package before choosing between dbt and our own runner (was D10)</td><td>Decide on evidence. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T22</td><td>The agent team may switch its own rules off, except rules the risk owner locks (was D11)</td><td>Teams keep freedom; the org keeps its minimum. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
+<tr><td>T23</td><td>Results published as OTel's gen_ai.evaluation.result, extended with scale, threshold, findings and rule identity (was D12)</td><td>Any tool can read them without our code. Accepted with the other recommendations on 18 Oct.</td><td>18 Oct</td></tr>
 </table></div>
 
 <h4>Open</h4>
 <div class="tbl"><table>
 <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
-<tr><td>D3</td><td>Where inline checks run first</td><td>Framework hooks · LiteLLM gateway</td><td><b>Framework hooks first.</b> Only they see tool calls. LiteLLM second, for non-Python agents.</td></tr>
-<tr><td>D5</td><td>Which semantic layer to write metric definitions for first</td><td>Cube Core · Databricks Metric Views · Power BI / Fabric</td><td>Follow your earlier "by track" choice: Cube for the open track, Metric Views for Databricks clients.</td></tr>
-<tr><td>D6</td><td>How online checks get traces first</td><td>Tap (Collector sends a copy) · Pull (read from Phoenix, Langfuse, LangSmith, App Insights)</td><td><b>Pull first.</b> It works with existing projects and allows backfill. Tap second, for near real-time.</td></tr>
-<tr><td>D7</td><td>Conversation layer</td><td>MCP server over the client's semantic layer · our own chat UI</td><td><b>MCP server.</b> Any chat surface can use it, and we build no UI.</td></tr>
-<tr><td>D8</td><td>Check replies while they stream?</td><td>Yes, check per sentence while streaming · No, check the full reply before sending</td><td><b>No for now.</b> FNOL and clothing don't stream to the customer. Revisit when an agent does.</td></tr>
-<tr><td>D9</td><td>Do we carry the work after results land (the loop)?</td><td>Yes, all of it · Yes, scoped · No, stop at writing scores</td><td><b>Yes, scoped:</b> jobs written once against ports, a five-method adapter per tool, a short supported list, steps 1–6 first. Your instinct (carry it) is right; the scoping is what keeps the work bounded.</td></tr>
-<tr><td>D10</td><td>Run the batch rules on our own runner or as a dbt package?</td><td>llm-cost-explainer runner (DuckDB) · dbt package (dbt-duckdb locally, any dbt warehouse for clients) · both</td><td><b>Test before deciding:</b> two cost rules as a dbt package in Tier 5, compared with the existing runner on effort and reach.</td></tr>
-<tr><td>D11</td><td>Who may switch a rule off?</td><td>The agent team, any rule · The agent team, except rules the risk owner locks · Only the risk owner</td><td><b>Agent team, except locked rules.</b> Teams keep freedom over their own rules; the org keeps its minimum.</td></tr>
-<tr><td>D12</td><td>Is our result format a Python class or a published convention?</td><td>Private class only · OTel's <code>gen_ai.evaluation.result</code> plus our extensions (scale, threshold, findings, rule identity), with the class as one implementation</td><td><b>Adopt OTel's event and extend it.</b> The landscape check confirmed the event exists (status Development).</td></tr>
+<tr><td colspan="4" class="muted">None open. New ones are added here as they come up.</td></tr>
 </table></div>
 
 <!-- ================================================================== ARCH -->
@@ -937,6 +938,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>18 Oct 2026</td><td>All open recommendations accepted: D3, D5–D12 are now T15–T23; no decisions open.</td></tr>
 <tr><td>18 Oct 2026</td><td>Trace gap fixed in the harness (T14, was D14); all five patterns pass on all 29 FNOL scenarios.</td></tr>
 <tr><td>18 Oct 2026</td><td>Patterns run on FNOL's 29 scenarios. Found and fixed four weaknesses of ours; found one real gap in FNOL's traces (payouts not on the conversation's trace), decision D14.</td></tr>
 <tr><td>18 Oct 2026</td><td>Tier 1 done (presets). Tier 2: <code>Session</code>, the five patterns and the FNOL example built (125 tests); left: your review, and running them on real FNOL and clothing-agent conversations.</td></tr>
