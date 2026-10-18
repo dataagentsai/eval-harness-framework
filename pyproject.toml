@@ -49,3 +49,7 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "TID"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tutorial pages are prose and drawings in Python strings: long lines are the text.
+"tutorial/*" = ["E501"]
