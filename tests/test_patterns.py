@@ -692,3 +692,124 @@ def test_every_rule_takes_a_plain_description() -> None:
         }
     )
     assert built["lookup_first"].description == "Never pay a claim nobody has read."
+
+
+# ------------------------------------------------------------- what wasn't recorded
+NOTHING = frozenset({"text", "arguments", "results"})
+APPROVE_BIG = DecisionVsShould(
+    decision="awaiting_approval",
+    when=[
+        {
+            "all": [
+                {"tool_called": "request_payout"},
+                {"result_of": "get_claim", "field": "approved_amount", "above": 25000},
+            ]
+        }
+    ],
+)
+HANDOVER_UNDER = DecisionVsShould(
+    decision="awaiting_human",
+    check="under",
+    when=[{"consecutive_failed_at_least": 2}, {"user_says": ["speak to a person"]}],
+)
+PAID = ClaimNeedsAction(claims={"paid": {"phrases": ["has been paid"], "tool": "issue_payout"}})
+
+
+@pytest.mark.parametrize(
+    ("name", "pattern", "steps", "unrecorded", "verdict"),
+    [
+        # FNOL's real case: approval asked, the claim's amount not in the trace
+        (
+            "approval_amount_unrecorded",
+            APPROVE_BIG,
+            [
+                call("get_claim", id="C1"),
+                ok("get_claim", None),
+                call("request_payout"),
+                ok("request_payout"),
+                Step("decision", name="awaiting_approval"),
+            ],
+            NOTHING,
+            "skip",
+        ),
+        (
+            "approval_amount_recorded",
+            APPROVE_BIG,
+            [
+                call("get_claim", id="C1"),
+                ok("get_claim", {"approved_amount": 100}),
+                call("request_payout"),
+                ok("request_payout"),
+                Step("decision", name="awaiting_approval"),
+            ],
+            frozenset(),
+            "fail",
+        ),
+        # no claim read at all: the amount can't matter, so "over" is judged
+        (
+            "approval_with_no_lookup",
+            APPROVE_BIG,
+            [
+                call("request_payout"),
+                ok("request_payout"),
+                Step("decision", name="awaiting_approval"),
+            ],
+            NOTHING,
+            "fail",
+        ),
+        # two failures in a row are in the structure: judged even with no text
+        (
+            "handover_due_from_failures",
+            HANDOVER_UNDER,
+            [call("get_claim"), failed("get_claim"), call("get_claim"), failed("get_claim")],
+            NOTHING,
+            "fail",
+        ),
+        (
+            "handover_words_unrecorded",
+            HANDOVER_UNDER,
+            [call("get_claim"), ok("get_claim")],
+            NOTHING,
+            "skip",
+        ),
+        (
+            "handover_words_recorded",
+            HANDOVER_UNDER,
+            [user("hi"), call("get_claim"), ok("get_claim")],
+            frozenset(),
+            "pass",
+        ),
+        ("handover_empty_turn_words_unrecorded", HANDOVER_UNDER, [], NOTHING, "skip"),
+        ("replies_unrecorded", PAID, [call("get_claim"), ok("get_claim")], NOTHING, "skip"),
+        (
+            "lookup_same_id_unrecorded",
+            RequiresBefore(action="issue_payout", before="get_claim", same=["id"]),
+            [call("get_claim"), ok("get_claim"), call("issue_payout")],
+            NOTHING,
+            "skip",
+        ),
+        (
+            "no_lookup_at_all_still_judged",
+            RequiresBefore(action="issue_payout", before="get_claim", same=["id"]),
+            [call("issue_payout")],
+            NOTHING,
+            "fail",
+        ),
+        (
+            "limit_argument_unrecorded",
+            ArgumentLimit(tool="issue_refund", field="amount", max=10000),
+            [call("issue_refund")],
+            NOTHING,
+            "skip",
+        ),
+    ],
+)
+def test_what_was_not_recorded_is_never_read_as_a_fact(
+    name: str, pattern: Pattern, steps: list[Step], unrecorded: frozenset[str], verdict: str
+) -> None:
+    result = pattern.evaluate(
+        EvalRequest(session=Session("s1", tuple(steps), unrecorded=unrecorded))
+    )
+    assert result.verdict == verdict, result.reason
+    if verdict == "skip":
+        assert result.reason.startswith("could not judge")

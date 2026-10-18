@@ -150,7 +150,7 @@ the release), re-running new rules over old traces, and cost rules that need day
     ["Good for", "Regression, cost rules, backfill", "PII, injection, argument limits, spend caps", "The five patterns, groundedness, judged checks"],
     ["Built here", status(False, "release CLI: Tier 7; cost rules: Tier 5"),
      status(False, "any check at any moment: Tier 3 (the reference agent's harness already does it its own way)"),
-     status(True, "from a trace file; stores next")],
+     status(True, "from a trace file and App Insights")],
 ])}
 <h2>Each check declares its speed</h2>
 <div class="text"><p>Every check states how fast it is, and the framework refuses to put a slow

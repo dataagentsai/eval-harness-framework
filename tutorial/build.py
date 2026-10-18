@@ -29,7 +29,7 @@ HOME = '<a class="home" href="https://cleandataengineering.ai/">cleandataenginee
 if PUBLISH:
     OUT = Path(sys.argv[sys.argv.index("--publish") + 1]).expanduser()
 SECTIONS = ["pages_start", "pages_arch", "pages_hooks", "pages_outputs", "pages_session", "pages_patterns",
-            "pages_yaml", "pages_traces", "pages_catalog", "pages_requirements", "pages_design",
+            "pages_yaml", "pages_traces", "pages_realrun", "pages_catalog", "pages_requirements", "pages_design",
             "pages_review"]
 
 EXTRA_CSS = r"""

@@ -17,6 +17,8 @@ deepeval = ["deepeval==4.3.1"]
 ragas = ["ragas==0.4.3", "langchain-community==0.4.1"]
 # spaCy's model is a separate download: en_core_web_sm 3.8.0 (FINDINGS.md).
 presidio = ["presidio-analyzer==2.2.364"]
+# Reading traces from a workspace-based App Insights resource.
+appinsights = ["azure-monitor-query==2.0.0", "azure-identity==1.26.0"]
 
 [dependency-groups]
 dev = ["pytest>=8", "mypy>=1.11", "ruff>=0.6", "types-PyYAML>=6.0"]

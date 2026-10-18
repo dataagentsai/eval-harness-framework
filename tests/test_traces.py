@@ -299,3 +299,64 @@ def test_rebuilt_steps_carry_their_time_in_order() -> None:
     for session in sessions(OtlpFile(RECORDED).spans()):
         times = [s.at for s in session.steps]
         assert None not in times and times == sorted(times), session.id
+
+
+@pytest.mark.parametrize(
+    "span",
+    [
+        Span(
+            "t1",
+            "s1",
+            "agent.turn",
+            1.5,
+            2.25,
+            {"agent.captured": "False", "n": 3, "x": 0.5, "ok": True},
+        ),
+        Span(
+            "t1",
+            "s2",
+            "agent.tool",
+            1.6,
+            1.7,
+            {"tags": ["a", "b"], "kv": {"k": "v"}},
+            parent_id="s1",
+            error=True,
+            status_message="boom",
+        ),
+    ],
+)
+def test_a_span_written_as_otlp_reads_back_the_same(span: Span, tmp_path: Path) -> None:
+    from evalharness.traces import write_otlp
+
+    path = tmp_path / "copy.jsonl"
+    assert write_otlp([span], path, service="fnol") == 1
+    (back,) = OtlpFile(path).spans()
+    assert back == span
+
+
+@pytest.mark.parametrize(
+    ("spans", "unrecorded"),
+    [
+        ([chat("t1", 1, [u("hi")], [a("hello")])], set()),
+        ([Span("t1", "c", "chat", 1, 2, {"gen_ai.operation.name": "chat"})], {"text"}),
+        (
+            [
+                Span(
+                    "t1",
+                    "x",
+                    "execute_tool",
+                    1,
+                    2,
+                    {"gen_ai.operation.name": "execute_tool", "gen_ai.tool.name": "get_order"},
+                )
+            ],
+            {"arguments", "results"},
+        ),
+        ([tool("t1", 1, "get_order", "x1", {"id": 7})], set()),
+    ],
+)
+def test_a_rebuilt_session_says_what_its_spans_do_not_hold(
+    spans: list[Span], unrecorded: set[str]
+) -> None:
+    (session,) = sessions(spans)
+    assert set(session.unrecorded) == unrecorded

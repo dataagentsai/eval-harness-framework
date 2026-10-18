@@ -26,6 +26,14 @@ from evalharness.adapter import Adapter
 from evalharness.core import EvalRequest, EvalResult, Finding, Scale, Session, Step
 
 Found = dict[str, Any]
+UNJUDGED = "unjudged"
+"""The kind of an item a check could not judge, because the session did not record what it needs."""
+
+
+def _unjudged(label: str, step: int) -> Found:
+    return {"kind": UNJUDGED, "label": label, "step": step}
+
+
 NEGATIONS: tuple[str, ...] = (
     "not",
     "n't",
@@ -72,7 +80,9 @@ class Pattern(Adapter):
 
     def check(self, session: Session) -> tuple[int, list[Found]]:
         """How many items were checked, and each violation as `{kind, label, step}`;
-        `step` (the index in `session.steps`) stays in the raw answer."""
+        `step` (the index in `session.steps`) stays in the raw answer. An item
+        that needs what the session did not record is not checked: it is listed
+        with kind `unjudged`, never counted as a pass or a fail."""
         raise NotImplementedError
 
     def to_provider(self, request: EvalRequest) -> Session:
@@ -84,13 +94,18 @@ class Pattern(Adapter):
         return {"session": payload.id, "checked": checked, "findings": found}
 
     def from_provider(self, raw: Mapping[str, Any], request: EvalRequest) -> EvalResult:
-        checked, found = int(raw["checked"]), list(raw["findings"])
+        checked, every = int(raw["checked"]), list(raw["findings"])
+        found = [f for f in every if f["kind"] != UNJUDGED]
+        unjudged = [f for f in every if f["kind"] == UNJUDGED]
+        if checked == 0 and unjudged:
+            return self.result("skip", reason=f"could not judge: {unjudged[0]['label']}", raw=raw)
         held = 1.0 if checked == 0 else max(0.0, 1.0 - len(found) / checked)
         reason = (
             "nothing to check"
             if checked == 0
             else f"{checked - len(found)} of {checked} held"
             + "".join(f"; {f['label']}" for f in found[:3])
+            + (f"; {len(unjudged)} not judged: {unjudged[0]['label']}" if unjudged else "")
         )
         return self.scored(
             held,
@@ -113,12 +128,21 @@ class RequiresBefore(Pattern):
 
     def check(self, session: Session) -> tuple[int, list[Found]]:
         found: list[Found] = []
-        actions = session.calls(self.action)
-        for i, call in actions:
-            if not any(
-                j < i and session.succeeded(j) and self._same(call, prior)
-                for j, prior in session.calls(self.before)
-            ):
+        checked = 0
+        blind = bool(self.same) and "arguments" in session.unrecorded
+        for i, call in session.calls(self.action):
+            priors = [p for j, p in session.calls(self.before) if j < i and session.succeeded(j)]
+            if priors and blind:  # a lookup happened; whether for the same one is unknown
+                found.append(
+                    _unjudged(
+                        f"arguments not recorded, so “same {', '.join(self.same)}” "
+                        f"can't be checked for {self.action}",
+                        i,
+                    )
+                )
+                continue
+            checked += 1
+            if not any(self._same(call, prior) for prior in priors):
                 found.append(
                     {
                         "kind": "missing_before",
@@ -127,7 +151,7 @@ class RequiresBefore(Pattern):
                         "step": i,
                     }
                 )
-        return len(actions), found
+        return checked, found
 
     def _same(self, call: Step, prior: Step) -> bool:
         return all(call.arguments.get(k) == prior.arguments.get(k) for k in self.same)
@@ -155,6 +179,11 @@ class ArgumentLimit(Pattern):
         found: list[Found] = []
         checked = 0
         for i, call in session.calls(self.tool):
+            if "arguments" in session.unrecorded and self.field not in call.arguments:
+                found.append(
+                    _unjudged(f"arguments not recorded, so {self.tool}.{self.field} is unknown", i)
+                )
+                continue
             value = _number(call.arguments.get(self.field))
             if value is None:
                 continue
@@ -209,6 +238,8 @@ class ClaimNeedsAction(Pattern):
     def check(self, session: Session) -> tuple[int, list[Found]]:
         found: list[Found] = []
         checked = 0
+        if "text" in session.unrecorded and not any(s.by_agent for s in session.steps):
+            return 0, [_unjudged("the agent's replies were not recorded", len(session.steps))]
         for i, step in enumerate(session.steps):
             if not step.by_agent:
                 continue
@@ -285,13 +316,25 @@ class DecisionVsShould(Pattern):
 
     def check(self, session: Session) -> tuple[int, list[Found]]:
         found: list[Found] = []
-        windows, start = 0, 0
+        windows, start, made = 0, 0, 0
+        unrecorded = session.unrecorded
         for i, step in enumerate(session.steps):
             if not self._made(step):
                 continue
-            windows += 1
+            made += 1
             window = session.steps[start:i]
-            if self.check_over and not self._reason(window):
+            start = i + 1
+            state, reason = _any(self.when, window, unrecorded)
+            if self.check_over and state == UNKNOWN:
+                found.append(
+                    _unjudged(
+                        f"{self.decision} made; whether a rule called for it is unknown ({reason})",
+                        i,
+                    )
+                )
+                continue
+            windows += 1
+            if self.check_over and state == NO:
                 found.append(
                     {
                         "kind": "over",
@@ -299,12 +342,18 @@ class DecisionVsShould(Pattern):
                         "step": i,
                     }
                 )
-            start = i + 1
         rest = session.steps[start:]
-        if rest or windows == 0:
+        if rest or made == 0:
+            state, reason = _any(self.when, rest, unrecorded)
+            if self.check_under and state == UNKNOWN:
+                found.append(
+                    _unjudged(
+                        f"whether {self.decision} was due is unknown ({reason})", len(session.steps)
+                    )
+                )
+                return windows, found
             windows += 1
-            reason = self._reason(rest)
-            if self.check_under and reason:
+            if self.check_under and state == YES:
                 found.append(
                     {
                         "kind": "under",
@@ -314,8 +363,63 @@ class DecisionVsShould(Pattern):
                 )
         return windows, found
 
-    def _reason(self, window: Sequence[Step]) -> str:
-        return next((r for c in self.when if (r := _holds(c, window))), "")
+
+YES, NO, UNKNOWN = "yes", "no", "unknown"
+NEEDS = {"result_of": "results", "user_says": "text", "tool": "arguments"}
+"""What each condition reads that a source may not have recorded."""
+
+
+def _any(
+    when: Sequence[Mapping[str, Any]], steps: Sequence[Step], unrecorded: frozenset[str]
+) -> tuple[str, str]:
+    """Whether any condition holds: yes with its reason, no, or unknown with why."""
+    unknown = ""
+    for condition in when:
+        state, reason = _eval(condition, steps, unrecorded)
+        if state == YES:
+            return YES, reason
+        if state == UNKNOWN and not unknown:
+            unknown = reason
+    return (UNKNOWN, unknown) if unknown else (NO, "")
+
+
+def _eval(
+    condition: Mapping[str, Any], steps: Sequence[Step], unrecorded: frozenset[str]
+) -> tuple[str, str]:
+    """A condition over `steps`, in three values: what was not recorded can't
+    make it false."""
+    if "all" in condition:
+        parts = [_eval(c, steps, unrecorded) for c in condition["all"]]
+        if any(state == NO for state, _ in parts):
+            return NO, ""
+        if all(state == YES for state, _ in parts):
+            return YES, " and ".join(r for _, r in parts)
+        return UNKNOWN, next(r for state, r in parts if state == UNKNOWN)
+    reason = _holds(condition, steps)
+    if reason:
+        return YES, reason
+    for key, needs in NEEDS.items():
+        if key in condition and needs in unrecorded and _relevant(key, condition, steps):
+            return (
+                UNKNOWN,
+                f"{'customer words' if needs == 'text' else 'tool ' + needs} not recorded",
+            )
+    return NO, ""
+
+
+def _relevant(key: str, condition: Mapping[str, Any], steps: Sequence[Step]) -> bool:
+    """Whether unrecorded data could have made the condition true here: a tool
+    result only matters if that tool ran and succeeded; arguments only if that
+    tool was called; the customer's words always (unrecorded words leave no
+    step behind, so an empty window may still have had a customer speaking)."""
+    if key == "result_of":
+        return any(
+            s.kind == "tool_result" and s.name == condition["result_of"] and not s.is_error
+            for s in steps
+        )
+    if key == "tool":
+        return any(s.kind == "tool_call" and s.name == condition["tool"] for s in steps)
+    return True
 
 
 def _holds(condition: Mapping[str, Any], steps: Sequence[Step]) -> str:
@@ -403,6 +507,8 @@ class Consistency(Pattern):
         found: list[Found] = []
         checked = 0
         known: set[str] = set()
+        if "text" in session.unrecorded and not any(s.by_agent for s in session.steps):
+            return 0, [_unjudged("the agent's replies were not recorded", len(session.steps))]
         for i, step in enumerate(session.steps):
             if step.kind == "user" and self.from_user:
                 known |= {_norm(m) for p in self.facts.values() for m in p.findall(step.text)}

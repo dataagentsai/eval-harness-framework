@@ -232,3 +232,41 @@ for the proposal to the GenAI conventions group (Tier 11).
 
 The GenAI conventions now live in their own repository
 (open-telemetry/semantic-conventions-genai) and are all still `development`.
+
+---
+
+# Run 4b: a deployed agent's real traces, from App Insights (19 Oct 2026)
+
+`evalharness.sources.app_insights` read FNOL's deployed traces from its App
+Insights workspace (read-only; only spans named `agent.*` and `gen_ai.*`, so
+HTTP spans and the URLs in them stay in Azure). `scripts/pull_app_insights.py`
+wrote them to an OTLP file; `scripts/checks_on_traces.py` rebuilt the turns with
+FNOL's own reader (`agent_harness.watch`, new `record.from_trace_spans`) and
+ran the FNOL rules and the saved questions. Counts: `docs/runs/fnol-app-insights-2026-10-19.json`.
+
+What was there: 688 spans, 39 turns over 13–14 Oct from one test user. **No
+turn had content** (`agent.captured = False`: no customer words, no reply, no
+tool arguments or results) and **none had a conversation id** (the deployed
+build predates T14).
+
+**What it exposed.** The first run reported two over-escalations: approvals
+"with no rule calling for it". Both were false: the rule needs the claim's
+approved amount, which was not recorded, and read its absence as "not over
+₹25,000". The hand-over rule likewise passed turns whose words it never saw.
+
+**Fix:** `Session.unrecorded` names what the source did not record (`text`,
+`arguments`, `results`); the harness and the GenAI reader both set it. Each
+condition evaluates to yes, no or unknown, and is unknown when it needs
+unrecorded data that could have changed the answer (a tool result only if the
+tool ran and succeeded; arguments only if the tool was called; words always).
+A check that judged nothing because of it returns `skip: could not judge …`;
+a partly judged one says how many items it could not judge. Structural
+conditions (failures in a row, a payout with no claim read at all) are still
+judged.
+
+After the fix: no false findings; 5 hand-over checks judged from structure;
+everything needing words or values is an explicit skip.
+
+**Product consequence.** With privacy on, traces show what happened, not what
+was said. Content checks must run where the content is (inside the agent's
+environment, inline or right after the turn) and send only verdicts out.

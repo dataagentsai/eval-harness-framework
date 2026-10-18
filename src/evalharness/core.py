@@ -163,6 +163,11 @@ class Session:
     steps: tuple[Step, ...]
     outcome: str = ""
     """How it ended, in the host's words: `resolved`, `abandoned`, `escalated`."""
+    unrecorded: frozenset[str] = frozenset()
+    """What the source did not record, so a check must not read its absence as
+    a fact: `text` (what the customer and the agent said), `arguments` (tool
+    arguments), `results` (tool results). Production traces with content
+    capture off hold none of the three."""
 
     def calls(self, name: str | None = None) -> tuple[tuple[int, Step], ...]:
         """Tool calls, with their position in `steps`, optionally one tool's only."""

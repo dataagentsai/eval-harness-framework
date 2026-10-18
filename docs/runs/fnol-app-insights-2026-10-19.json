@@ -1,0 +1,64 @@
+{
+  "spans": 688,
+  "turns": 39,
+  "conversations": 39,
+  "captured": 0,
+  "with_session": 0,
+  "endings": {
+    "completed": 28,
+    "refused/R-COVERAGE": 1,
+    "refused/no_known_injection": 2,
+    "refused/agent.paused": 1,
+    "needs_approval": 2,
+    "escalated/injury-reported": 2,
+    "escalated/turns-exceeded": 2,
+    "escalated/asked-for-human": 1
+  },
+  "tools": {
+    "get_claim ok": 16,
+    "get_claim refused": 1,
+    "get_policy ok": 6,
+    "issue_payout ok": 2,
+    "list_claims ok": 2,
+    "list_policies ok": 2,
+    "register_claim ok": 2,
+    "request_payout unrecorded": 3,
+    "submit_document ok": 2,
+    "withdraw_claim ok": 1
+  },
+  "first": 1791900069.47381,
+  "last": 1791987495.883046,
+  "rules": {
+    "payout_needs_claim_lookup": {
+      "kind": "requires_before",
+      "nothing to check": 37,
+      "skip": 2
+    },
+    "payout_approval": {
+      "kind": "decision_vs_should",
+      "pass": 36,
+      "skip": 3
+    },
+    "payout_promise_kept": {
+      "kind": "claim_needs_action",
+      "skip": 39
+    },
+    "handed_to_person": {
+      "kind": "decision_vs_should",
+      "skip": 34,
+      "pass": 5
+    },
+    "facts_from_systems": {
+      "kind": "consistency",
+      "skip": 39
+    }
+  },
+  "questions": {
+    "under_escalations": 0,
+    "over_escalations": 0,
+    "promises_not_kept": 0,
+    "actions_without_prerequisite": 0,
+    "limits_exceeded": 0,
+    "unsupported_facts": 0
+  }
+}

@@ -27,6 +27,7 @@ ALLOWED: dict[str, set[str]] = {
     "adapters/deepeval_tools.py": {"deepeval"},
     "adapters/ragas_faithfulness.py": {"ragas"},
     "adapters/presidio_pii.py": {"presidio_analyzer"},
+    "sources/app_insights.py": {"azure"},
     "judge_model.py": {"azure", "deepeval", "ragas", "openai"},
 }
 MODULES = sorted(p.relative_to(SRC).as_posix() for p in SRC.rglob("*.py"))

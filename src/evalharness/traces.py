@@ -104,6 +104,52 @@ def otlp_spans(request: Mapping[str, Any]) -> Iterator[Span]:
                 )
 
 
+def write_otlp(spans: Iterable[Span], path: str | Path, service: str = "") -> int:
+    """Write `spans` as one OTLP JSON export request (one line), the format
+    `OtlpFile` reads: a copy of a store's traces to work on offline. Returns
+    how many spans were written."""
+    out = []
+    for span in spans:
+        record: dict[str, Any] = {
+            "traceId": span.trace_id,
+            "spanId": span.span_id,
+            "name": span.name,
+            "startTimeUnixNano": str(round(span.start * 1e9)),
+            "endTimeUnixNano": str(round(span.end * 1e9)),
+            "attributes": [{"key": k, "value": _to_otlp(v)} for k, v in span.attributes.items()],
+            "status": {"code": 2 if span.error else 0},
+        }
+        if span.parent_id:
+            record["parentSpanId"] = span.parent_id
+        if span.status_message:
+            record["status"]["message"] = span.status_message
+        out.append(record)
+    resource = (
+        {"attributes": [{"key": "service.name", "value": {"stringValue": service}}]}
+        if service
+        else {}
+    )
+    request = {"resourceSpans": [{"resource": resource, "scopeSpans": [{"spans": out}]}]}
+    Path(path).write_text(json.dumps(request, ensure_ascii=False) + "\n", encoding="utf-8")
+    return len(out)
+
+
+def _to_otlp(value: Any) -> dict[str, Any]:
+    if isinstance(value, bool):
+        return {"boolValue": value}
+    if isinstance(value, int):
+        return {"intValue": str(value)}
+    if isinstance(value, float):
+        return {"doubleValue": value}
+    if isinstance(value, list | tuple):
+        return {"arrayValue": {"values": [_to_otlp(v) for v in value]}}
+    if isinstance(value, Mapping):
+        return {
+            "kvlistValue": {"values": [{"key": k, "value": _to_otlp(v)} for k, v in value.items()]}
+        }
+    return {"stringValue": str(value)}
+
+
 def _otlp_value(value: Mapping[str, Any]) -> Any:
     if "stringValue" in value:
         return value["stringValue"]
@@ -231,7 +277,22 @@ def _session(key: str, group: list[Span]) -> tuple[float, Session]:
         if step.kind == "user":
             turn += 1
         steps.append(replace(step, turn=turn, at=at))
-    return group[0].start, Session(id=key, steps=tuple(steps))
+    return group[0].start, Session(id=key, steps=tuple(steps), unrecorded=_unrecorded(group))
+
+
+def _unrecorded(group: list[Span]) -> frozenset[str]:
+    """What these spans don't hold: messages on no model call (content capture
+    off), or a tool span without its arguments or, when it worked, its result."""
+    chats = [s for s in group if _operation(s) == "chat"]
+    tools = [s for s in group if _operation(s) == "execute_tool"]
+    missing = set()
+    if chats and not any("gen_ai.input.messages" in s.attributes for s in chats):
+        missing.add("text")
+    if any("gen_ai.tool.call.arguments" not in s.attributes for s in tools):
+        missing.add("arguments")
+    if any("gen_ai.tool.call.result" not in s.attributes and not s.error for s in tools):
+        missing.add("results")
+    return frozenset(missing)
 
 
 def _operation(span: Span) -> str:
