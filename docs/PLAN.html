@@ -176,7 +176,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>A stability label (alpha, beta, stable, deprecated) on every adapter, shown in the supported list.</span></li>
     <li><span class="pill me">Claude</span><span>Presets (for example <code>customer-support-azure</code>), so a team touches only rules, placement and consequence.</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Live run of all four adapters through <code>evaluators.yaml</code>. Found: DeepEval's "deterministic" check takes about 500 ms (declared online, not inline); Presidio's first call takes about 2 s to load (inline hosts must warm it up).</span></li>
-    <li class="ok"><span class="pill done">Done</span><span>FNOL wired to the new sibling: path source, CI checkout, image build contexts. FNOL's own CI tests caught the missing checkout. Suites: reference-agent 2,093 passed with the same 2 earlier failures; FNOL 755 passed. Image build not run on the Mac; CI is its first real build.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>FNOL wired to the new sibling: path source, CI checkout, image build contexts. FNOL's own CI tests caught the missing checkout. Suites: reference-agent 2,093 passed with the same 2 earlier failures; FNOL 755 passed. FNOL CI (run 39102832380, 18 Oct) passed end to end, including both Docker images with <code>evalharness</code> inside, after fixing the lint errors that had blocked it since 14 Oct.</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Move the four spike adapters into an adapters package; scales and severities move into <code>evaluators.yaml</code>.</span></li>
   </ul>
 </div>
@@ -933,6 +933,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>18 Oct 2026</td><td>FNOL CI green end to end, including both images with <code>evalharness</code>; its lint failure from 14 Oct fixed.</td></tr>
 <tr><td>17 Oct 2026</td><td>Tier 1 mostly done: <code>evalharness</code> 0.1.0 (core, four adapters, YAML config, 75 tests, mypy strict), extracted from and re-exported by agent-harness, FNOL wired. Landscape check applied: LLM Guard archived (dropped), Llama Guard gone from Groq (replaced), OTel <code>gen_ai.evaluation.result</code> exists (D12), Langfuse v4 with alerts, Promptfoo owned by OpenAI, Prometheus OTLP flag, LiteLLM sees MCP calls. USP sharpened (T6). D1, D2, D4, D13 taken (T10 to T13).</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Keep it simple: version 1" at the top, version tags on every tier, decision D13.</td></tr>
 <tr><td>17 Oct 2026</td><td>Added "Why there's no open standard for eval, and what we do": adopt, propose upstream to OTel, own spec only if blocked.</td></tr>
