@@ -235,7 +235,7 @@ svg #ah path{fill:var(--muted)}
     <li class="ok"><span class="pill done">Done</span><span>The weekly report (<code>evalharness.report</code>, <code>scripts/weekly_report.py</code>): rules with pass, fail, nothing to check and could not judge apart, fail rate among judged, change from the week before, the saved questions, broken requirements; from verdicts only, no model, no content. Built from FNOL's App Insights (test data, marked).</span></li>
     <li><span class="pill me">Claude</span><span>Result format published as semantic conventions (<code>eval.*</code> names), adopting OTel's GenAI evaluation fields where they exist (decision D12).</span></li>
     <li><span class="pill me">Claude</span><span>Tail-style sampling for online checks: errors, blocks, escalations, high cost and new prompt versions first, then a random baseline.</span></li>
-    <li><span class="pill me">Claude</span><span>Agent name, version, environment and prompt version on every result.</span></li>
+    <li><span class="pill me">Claude</span><span>Agent name on every result (done); version, environment and prompt version still to add.</span></li>
     <li class="ok"><span class="pill done">Done</span><span><code>ResultSink</code> port and the <code>OtelEvents</code> sink: verdicts as OTel <code>gen_ai.evaluation.result</code> events, on the judged trace, content-free by default; <code>not_applicable</code> kept apart from pass. Proven on Azure: 240 FNOL scenario verdicts sent from inside FNOL's environment and counted back with KQL. Saved questions compile to KQL (<code>to_kql</code>). Metrics still to do.</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Decisions: pull first (T17), Phoenix locally (T12).</span></li>
   </ul>
@@ -286,7 +286,7 @@ svg #ah path{fill:var(--muted)}
   <div class="tierhead"><h3>Tier 8 · Fit into tools teams already use</h3><span class="pill later">Later</span></div>
   <ul class="tasks">
 <li><span class="pill me">Claude</span><span>LangSmith: read runs in, write results back as feedback on the same run.</span></li>
-    <li><span class="pill me">Claude</span><span>App Insights: read with KQL, write custom events and metrics with the Azure Monitor exporter. Uses FNOL's App Insights.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>App Insights: read spans and verdicts with KQL; verdicts written as <code>gen_ai.evaluation.result</code> events (Tier 4). Metrics still to do.</span></li>
     <li><span class="pill me">Claude</span><span>Prometheus metrics plus a Grafana dashboard template.</span></li>
     <li><span class="pill me">Claude</span><span>Rule templates: the same "score fell three days running" rule in KQL (Azure Monitor alerts) and in PromQL (Prometheus alerts).</span></li>
     <li><span class="pill me">Claude</span><span>App Insights workbook template.</span></li>
