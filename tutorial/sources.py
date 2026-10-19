@@ -177,7 +177,7 @@ def strip(s):
 INTEGRATIONS = [
     # side, name, family, state
     ("source", "OTLP file (Collector)", "open", "built"),
-    ("source", "Phoenix", "open", "Tier 4"),
+    ("source", "Phoenix (not yet run live)", "open", "built"),
     ("source", "App Insights (KQL)", "azure", "built"),
     ("source", "Langfuse", "open", "Tier 4"),
     ("source", "LangSmith runs", "saas", "Tier 8"),

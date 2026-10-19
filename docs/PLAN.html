@@ -227,8 +227,8 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Turn <code>EvalRequest</code>s from the same spans (one per <code>invoke_agent</code> run), so per-reply checks run online too.</span></li>
     <li class="ok"><span class="pill done">Done</span><span>App Insights source (KQL, read-only, only <code>agent.*</code>/<code>gen_ai.*</code> spans), an OTLP file writer to copy traces offline, and the first run on FNOL's deployed traces: 39 turns, no content captured, no conversation ids. It found that checks read missing evidence as facts; fixed with <code>Session.unrecorded</code> and three-valued conditions (FINDINGS.md, run 4b).</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Decision T30: content checks run inside the agent's environment; only verdicts leave.</span></li>
-    <li><span class="pill me">Claude</span><span>Then Phoenix and Langfuse as sources (T28).</span></li>
-    <li><span class="pill me">Claude</span><span>Phoenix source (REST <code>/v1/projects/{id}/spans</code>, paged) and the OpenInference attribute names Phoenix's own instrumentors use. Live test waits for memory: Phoenix is a server, and the Mac has 8 GB.</span></li>
+    <li><span class="pill me">Claude</span><span>Then Langfuse as a source (T28).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Phoenix source (REST <code>v1/projects/{project}/spans</code>, paged by cursor, standard-library HTTP; shapes from arize-phoenix-client 3.5's generated types) and OpenInference spans translated to GenAI names before sessions are rebuilt. Not yet run against a live Phoenix: the Mac has no memory to spare for the server.</span></li>
     <li><span class="pill me">Claude</span><span>Tap: an OTLP receiver in the eval worker; a Collector config that sends it a copy.</span></li>
     <li><span class="pill me">Claude</span><span>Pull: read from Phoenix or Langfuse on a schedule, with backfill (re-run new rules on old traces).</span></li>
     <li><span class="pill me">Claude</span><span>Skip rules already judged inline; run session rules when a session closes.</span></li>
@@ -952,6 +952,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>19 Oct 2026</td><td><b>Version 1 complete.</b> Phoenix source and OpenInference translation added; with App Insights, the OTLP file, the five patterns, fact types, the 6 cost rules, Presidio and a judged check, verdicts back into App Insights and the weekly report, the v1 slice is built. 340 tests. Next: Tier 3.</td></tr>
 <tr><td>19 Oct 2026</td><td>Fact types for consistency (T26) and the 6 built cost rules through llm-cost-explainer as a library (Tier 5 started). Tutorial page “Cost rules”. 326 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>v1 step 3 done: the weekly report from App Insights verdicts; verdict events carry a format version (<code>evalharness.schema</code>) and the agent's name. Tutorial page “Weekly report”. Version 1's loop now runs end to end on Azure: read traces, check where the words are, write verdicts back, report. 297 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>v1 step 2 done (T30): verdicts back into App Insights as <code>gen_ai.evaluation.result</code> events from inside the agent's environment, content-free; saved questions compile to KQL and found a deliberate under-escalation on Azure. Tutorial page “Verdicts into App Insights”. 281 tests.</td></tr>

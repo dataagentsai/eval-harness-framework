@@ -185,9 +185,11 @@ def conversation_of(span: Span) -> str:
 
 
 def sessions(spans: Iterable[Span]) -> list[Session]:
-    """Each conversation in `spans`, rebuilt as a `Session`, oldest first."""
+    """Each conversation in `spans`, rebuilt as a `Session`, oldest first.
+    Spans named the OpenInference way (Phoenix's instrumentors) are translated
+    to the GenAI names first, so both rebuild the same."""
     groups: dict[str, list[Span]] = defaultdict(list)
-    for span in spans:
+    for span in map(from_openinference, spans):
         if _operation(span) in ("chat", "execute_tool"):
             groups[conversation_of(span)].append(span)
     built = [_session(key, group) for key, group in groups.items()]
@@ -347,3 +349,84 @@ def _json(raw: Any) -> Any:
         except ValueError:
             return raw
     return raw
+
+
+# ------------------------------------------------------------- OpenInference
+
+OI_KIND = "openinference.span.kind"
+
+
+def from_openinference(span: Span) -> Span:
+    """An OpenInference span with the GenAI names added: an `LLM` span becomes
+    a `chat` with its messages in the GenAI parts shape; a `TOOL` span becomes
+    an `execute_tool` with its name, arguments, result and call id. Only what
+    the span recorded is added, so unrecorded content stays unrecorded.
+    `session.id` is already a conversation key. Other spans pass unchanged."""
+    a = span.attributes
+    kind = str(a.get(OI_KIND, ""))
+    if kind not in ("LLM", "TOOL"):
+        return span
+    added: dict[str, Any] = {}
+    if kind == "LLM":
+        added["gen_ai.operation.name"] = "chat"
+        for side in ("input", "output"):
+            messages = _oi_messages(a, f"llm.{side}_messages")
+            if messages:
+                added[f"gen_ai.{side}.messages"] = json.dumps(messages, ensure_ascii=False)
+    else:
+        added["gen_ai.operation.name"] = "execute_tool"
+        added["gen_ai.tool.name"] = str(a.get("tool.name") or span.name)
+        for theirs, ours in (
+            ("input.value", "gen_ai.tool.call.arguments"),
+            ("output.value", "gen_ai.tool.call.result"),
+            ("tool_call.id", "gen_ai.tool.call.id"),
+        ):
+            if theirs in a:
+                added[ours] = a[theirs]
+    return replace(span, attributes={**a, **added})
+
+
+def _oi_messages(a: Mapping[str, Any], prefix: str) -> list[dict[str, Any]]:
+    """`llm.input_messages.0.message.role` and its siblings, as GenAI messages."""
+    indices = sorted(
+        {
+            int(k[len(prefix) + 1 :].split(".")[0])
+            for k in a
+            if k.startswith(prefix + ".") and k[len(prefix) + 1 :].split(".")[0].isdigit()
+        }
+    )
+    out = []
+    for i in indices:
+        m = f"{prefix}.{i}.message."
+        role = str(a.get(m + "role", ""))
+        content = a.get(m + "content")
+        parts: list[dict[str, Any]] = []
+        if role == "tool":
+            parts.append(
+                {
+                    "type": "tool_call_response",
+                    "id": str(a.get(m + "tool_call_id", "")),
+                    "response": content,
+                }
+            )
+        elif content:
+            parts.append({"type": "text", "content": content})
+        calls = sorted(
+            {
+                int(k[len(m + "tool_calls.") :].split(".")[0])
+                for k in a
+                if k.startswith(m + "tool_calls.")
+            }
+        )
+        for j in calls:
+            c = f"{m}tool_calls.{j}.tool_call."
+            parts.append(
+                {
+                    "type": "tool_call",
+                    "id": str(a.get(c + "id", "")),
+                    "name": str(a.get(c + "function.name", "")),
+                    "arguments": _json(a.get(c + "function.arguments", "{}")),
+                }
+            )
+        out.append({"role": role, "parts": parts})
+    return out

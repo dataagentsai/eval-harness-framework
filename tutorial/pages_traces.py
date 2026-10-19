@@ -115,6 +115,7 @@ which of its own attributes means “handed over”. The reference agent records
     ["A hand-over or approval decision", "No", status(False, "map a team's own attribute in YAML")],
     ["How the conversation ended", "No", status(False)],
 ])}
+{note("One standard already has it", "<p>OpenInference, the naming Phoenix's own instrumentors use, has span kinds <code>DECISION</code> and <code>GUARDRAIL</code>. Our Phoenix reader translates OpenInference model and tool spans today; reading its decision spans as hand-overs is the next step, and evidence for the OpenTelemetry proposal.</p>")}
 {note("What we'll do about it", "<p>Two things: let a team map its own attribute to a decision in YAML, and add these gaps to our proposal to the OpenTelemetry group (Tier 11). The standard itself is still marked “in development”, so this is a good moment to propose it.</p>")}
 {review("trace-gaps", "Gaps in the standard", [
     ("Should we propose a hand-over field to OpenTelemetry now, or wait until a second team needs it?",

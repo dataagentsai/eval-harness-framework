@@ -315,3 +315,18 @@ start after a format change), it compared a chosen period with an unfair
 "week before" (a chosen period is now compared with nothing), and it said "no
 requirement was broken" while a rule had failed whose rule named none (such
 failures are now counted apart, as a gap in the rules file).
+
+---
+
+# Phoenix and OpenInference (19 Oct 2026)
+
+Phoenix's spans API was taken from its own client (arize-phoenix-client 3.5,
+types generated from the server's OpenAPI document): `GET
+v1/projects/{project}/spans`, paged by `next_cursor`. Phoenix may answer with
+nested attributes; they are flattened back to dotted names. Spans from
+OpenInference instrumentors (Phoenix's own) are translated to the GenAI names
+before sessions are rebuilt, adding only what was recorded. Tested on pages
+shaped by those types; not yet run against a live Phoenix.
+
+Worth noting for the OpenTelemetry proposal: OpenInference has span kinds
+`DECISION` and `GUARDRAIL`, exactly what the GenAI conventions lack (run 4).
