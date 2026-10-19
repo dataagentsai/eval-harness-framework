@@ -77,9 +77,9 @@ finds two mistakes:</p>
         title="consistency: facts must come from a system", q="Did it state an amount no system gave it?",
         lesson="""<p>Every fact of a named kind in a reply (a claim id, an amount) must
 appear in an earlier tool result, or in what the customer said. You name each
-kind of fact with a pattern (<code>CLM-\\d{6}</code>, <code>₹ and digits</code>).
-Values are compared without spaces, commas and symbols, so “₹12,400” in a reply
-matches 12400 in a result.</p>""",
+kind of fact without writing a regular expression: a built-in type such as
+<code>inr_amount</code>, or a shape such as <code>CLM-######</code> (<code>#</code> a digit, <code>A</code> a letter).
+Each type compares values its own way, so “Rs. 12,400”, “₹12,400” and 12400 in a result all match.</p>""",
         limits=["It catches invented facts, not wrong arithmetic done on true ones.",
                 "Repeating the customer's own claim id back is allowed; that's not inventing it."],
         questions=[("Which facts would an ops team most want guarded: amounts, ids, dates, policy terms?",

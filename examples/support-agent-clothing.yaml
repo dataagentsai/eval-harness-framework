@@ -48,5 +48,5 @@ evaluators:
     requirements: [P-REFUND-STATUS]
     adapter: consistency
     facts:
-      order_id: "[A-Z]{2}-\\d{5}"
-      amount: "₹\\s?[\\d,]+"
+      order_id: {shape: "AA-#####"}     # # is a digit, A a letter
+      amount: inr_amount

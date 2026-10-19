@@ -136,13 +136,13 @@ EXAMPLES = {
              say("Your payout is being processed.")],
     ),
     "consistency": dict(
-        pattern=Consistency(name="facts_from_systems", facts={"claim_id": r"CLM-\d{6}",
-                                                              "amount": r"₹\s?[\d,]+"}),
+        pattern=Consistency(name="facts_from_systems", facts={"claim_id": {"shape": "CLM-######"},
+                                                              "amount": "inr_amount"}),
         yaml="""facts_from_systems:
   adapter: consistency
   facts:
-    claim_id: "CLM-\\\\d{6}"
-    amount: "₹\\\\s?[\\\\d,]+\"""",
+    claim_id: {shape: "CLM-######"}   # # a digit, A a letter
+    amount: inr_amount              # ₹12,400 · Rs. 12,400 · INR 12400""",
         good=[u("How much will I get for CLM-104233?"), call("get_claim", id="CLM-104233"),
               ok("get_claim", CLAIM), say("Claim CLM-104233 is approved for ₹12,400.")],
         bad=[u("How much will I get for CLM-104233?"), call("get_claim", id="CLM-104233"),

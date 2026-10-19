@@ -24,6 +24,7 @@ from typing import Any
 
 from evalharness.adapter import Adapter
 from evalharness.core import EvalRequest, EvalResult, Finding, Scale, Session, Step
+from evalharness.facts import fact_type
 
 Found = dict[str, Any]
 UNJUDGED = "unjudged"
@@ -487,39 +488,50 @@ class Consistency(Pattern):
     result: a claim id or an amount the agent states must come from a system.
 
         facts:
-          claim_id: "CLM-\\\\d{6}"
-          amount: "₹\\\\s?[\\\\d,]+"
+          claim_id: {shape: "CLM-######"}
+          amount: inr_amount
 
-    Values are compared after dropping everything but letters, digits and
-    hyphens, so “₹12,400” in a reply matches 12400 in a result. With
+    Each kind is a fact type (`evalharness.facts`): a built-in type, a shape,
+    or a regular expression. Values are compared the type's way, so an amount
+    in rupees matches the same number in a result however it is written. With
     `from_user` (the default), what the customer said counts as known too:
     repeating the customer's own claim id back is not inventing it."""
 
     kind = "consistency"
     obligations = ("AAC-0029",)
 
-    def __init__(self, *, facts: Mapping[str, str], from_user: bool = True, **base: Any) -> None:
+    def __init__(
+        self, *, facts: Mapping[str, str | Mapping[str, Any]], from_user: bool = True, **base: Any
+    ) -> None:
         super().__init__(**base)
-        self.facts = {name: re.compile(pattern) for name, pattern in facts.items()}
+        self.facts = {name: fact_type(name, spec) for name, spec in facts.items()}
         self.from_user = from_user
 
     def check(self, session: Session) -> tuple[int, list[Found]]:
         found: list[Found] = []
         checked = 0
-        known: set[str] = set()
+        known: dict[str, set[str]] = {name: set() for name in self.facts}
         if "text" in session.unrecorded and not any(s.by_agent for s in session.steps):
             return 0, [_unjudged("the agent's replies were not recorded", len(session.steps))]
+
+        def learn(texts: list[str]) -> None:
+            for name, kind in self.facts.items():
+                for text in texts:
+                    known[name] |= {n for v in kind.find(text) if (n := kind.normalise(v))}
+                    whole = kind.normalise(text)
+                    if whole:
+                        known[name].add(whole)
+
         for i, step in enumerate(session.steps):
             if step.kind == "user" and self.from_user:
-                known |= {_norm(m) for p in self.facts.values() for m in p.findall(step.text)}
+                learn([step.text])
             elif step.kind == "tool_result":
-                known |= {_norm(v) for v in _scalars(step.result)}
-                known |= {_norm(m) for p in self.facts.values() for m in p.findall(step.text)}
+                learn([str(v) for v in _scalars(step.result)] + [step.text])
             elif step.by_agent:
-                for name, pattern in self.facts.items():
-                    for value in pattern.findall(step.text):
+                for name, kind in self.facts.items():
+                    for value in kind.find(step.text):
                         checked += 1
-                        if _norm(value) not in known:
+                        if kind.normalise(value) not in known[name]:
                             found.append(
                                 {
                                     "kind": "unsupported_fact",
