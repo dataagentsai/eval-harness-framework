@@ -134,7 +134,7 @@ svg #ah path{fill:var(--muted)}
   <a href="#t2"><span class="pill done">Done</span> <span class="pill me">v1</span><b>Tier 2</b>Sessions + domain patterns</a>
   <a href="#t3"><span class="pill doing">In progress</span> <span class="pill me">v2</span><b>Tier 3</b>Positions + the decide step</a>
   <a href="#t4"><span class="pill doing">In progress</span> <span class="pill me">v1 (pull only)</span><b>Tier 4</b>OpenTelemetry in and out</a>
-  <a href="#t5"><span class="pill next">Planned</span> <span class="pill me">v1 (6 built rules)</span><b>Tier 5</b>Cost pack (36 rules)</a>
+  <a href="#t5"><span class="pill doing">In progress</span> <span class="pill me">v1 (6 built rules)</span><b>Tier 5</b>Cost pack (36 rules)</a>
   <a href="#t6"><span class="pill next">Planned</span> <span class="pill me">v1 (Presidio only)</span><b>Tier 6</b>Security pack</a>
   <a href="#t7"><span class="pill later">Later</span> <span class="pill me">v2</span><b>Tier 7</b>Host adapters</a>
   <a href="#t8"><span class="pill later">Later</span> <span class="pill me">v3</span><b>Tier 8</b>Fit into existing tools</a>
@@ -242,11 +242,11 @@ svg #ah path{fill:var(--muted)}
 </div>
 
 <div class="card" id="t5">
-  <div class="tierhead"><h3>Tier 5 · Cost pack: the 36 LLM cost rules</h3><span class="pill next">Planned</span></div>
+  <div class="tierhead"><h3>Tier 5 · Cost pack: the 36 LLM cost rules</h3><span class="pill doing">In progress</span></div>
   <p>The rules LLM-01 to LLM-36 (DataAgents.ai/57 and 61). Six are already built in <code>~/llm-cost-explainer</code>. Most look at many calls over days, so they run on a second engine (the rule runner) reused from llm-cost-explainer. About eight can also block a call before it goes out.</p>
   <ul class="tasks">
     <li><span class="pill me">Claude</span><span>One rule format for both engines. Its <code>grain</code> picks the engine: call, trace or session go to evaluators; prefix cluster, day or usage bucket go to the rule runner.</span></li>
-    <li><span class="pill me">Claude</span><span>Use llm-cost-explainer's rule runner as a library (it stays its own product too). DuckDB runs in-process; the same SQL can also run where the data already is, such as ClickHouse or Databricks.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>llm-cost-explainer's rule runner used as a library: the <code>RuleRunner</code> port and the <code>LlmCostExplainer</code> adapter; its 6 built rules (LLM-01, 06, 08, 22, 24, 26) become ordinary verdicts (fail with each scope and the saving, pass, or could not judge when the export lacks what a rule needs), into the same sinks and weekly report. Its repository is private for now. Running the same SQL where the data is (ClickHouse, Databricks) is still to do.</span></li>
     <li><span class="pill me">Claude</span><span>Inline cost guardrails: LLM-16, 07, 25, 13, 11, 22, 35 and budget caps.</span></li>
     <li><span class="pill me">Claude</span><span>Trace-level cost rules: LLM-15, 14, 27, 09, 28, 30, 10, 17, 33.</span></li>
     <li><span class="pill me">Claude</span><span>Finding lifecycle for every pack: new, ongoing, resolved, regressed, snoozed, accepted.</span></li>
@@ -952,6 +952,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>19 Oct 2026</td><td>Fact types for consistency (T26) and the 6 built cost rules through llm-cost-explainer as a library (Tier 5 started). Tutorial page “Cost rules”. 326 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>v1 step 3 done: the weekly report from App Insights verdicts; verdict events carry a format version (<code>evalharness.schema</code>) and the agent's name. Tutorial page “Weekly report”. Version 1's loop now runs end to end on Azure: read traces, check where the words are, write verdicts back, report. 297 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>v1 step 2 done (T30): verdicts back into App Insights as <code>gen_ai.evaluation.result</code> events from inside the agent's environment, content-free; saved questions compile to KQL and found a deliberate under-escalation on Azure. Tutorial page “Verdicts into App Insights”. 281 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>App Insights source built and run on FNOL's deployed traces (read-only). Lesson: what isn't recorded must never become a verdict; patterns now answer “could not judge” (<code>Session.unrecorded</code>, three-valued conditions). Tutorial page “Real traces: FNOL”. 269 tests; reference-agent 0b2e22a.</td></tr>

@@ -21,9 +21,16 @@ presidio = ["presidio-analyzer==2.2.364"]
 appinsights = ["azure-monitor-query==2.0.0", "azure-identity==1.26.0"]
 # Writing verdicts as OpenTelemetry events, wherever the agent's telemetry goes.
 otel = ["opentelemetry-api>=1.39"]
+# The cost rules: llm-cost-explainer's rule runner, used as a library (T7). Its
+# repository is private for now, so this extra installs only with access to it;
+# nothing else depends on it.
+cost = ["llm-cost-explainer"]
 
 [dependency-groups]
 dev = ["pytest>=8", "mypy>=1.11", "ruff>=0.6", "types-PyYAML>=6.0"]
+
+[tool.uv.sources]
+llm-cost-explainer = { git = "https://github.com/basantchoudhary/llm-cost-explainer" }
 
 [build-system]
 requires = ["hatchling"]

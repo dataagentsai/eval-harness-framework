@@ -21,6 +21,7 @@ VENDORS = (
     "openai",
     "langchain",
     "spacy",
+    "lce",
 )
 ALLOWED: dict[str, set[str]] = {
     "adapters/azure_groundedness.py": {"azure"},
@@ -28,6 +29,7 @@ ALLOWED: dict[str, set[str]] = {
     "adapters/ragas_faithfulness.py": {"ragas"},
     "adapters/presidio_pii.py": {"presidio_analyzer"},
     "sources/app_insights.py": {"azure"},
+    "costs.py": {"lce"},
     "judge_model.py": {"azure", "deepeval", "ragas", "openai"},
 }
 MODULES = sorted(p.relative_to(SRC).as_posix() for p in SRC.rglob("*.py"))

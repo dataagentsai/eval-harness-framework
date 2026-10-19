@@ -194,7 +194,7 @@ INTEGRATIONS = [
     ("check", "Azure Content Safety", "azure", "Tier 6"),
     ("check", "Prompt Guard 2 · safeguard", "open", "Tier 6"),
     ("check", "Bedrock Guardrails", "aws", "later"),
-    ("check", "Cost rules (36)", "open", "Tier 5"),
+    ("check", "Cost rules (6 of 36)", "open", "built"),
     ("host", "Reference agent harness", "open", "built"),
     ("host", "Pydantic AI hooks", "open", "Tier 7"),
     ("host", "LangGraph hooks", "open", "Tier 7"),
