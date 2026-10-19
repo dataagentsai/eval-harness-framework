@@ -76,7 +76,8 @@ other questions found nothing.</p></div>
 {yaml_block(to_kql(BY_NAME["under_escalations"]), "to_kql(under_escalations): paste into App Insights › Logs")}
 {code("src/evalharness/sinks/otel_events.py", r"^def attributes", r"^LABELS", "The event, in real code")}
 {review("trace-verdicts", "Verdicts into App Insights", [
-    "Is the content-free default right: counts and finding kinds, never the quoted words or amounts? My recommendation: yes, with the full explanation only where the store may hold content (a dev deployment).",
+    ("Is the content-free default right: counts and finding kinds, never the quoted words or amounts?",
+     "Yes (19 Oct): the full explanation only where the store may hold content, such as a dev deployment."),
 ])}
 <p class="deeper">What a team gets on top of this, tool by tool: {link("arch-outputs", "on top of your tools")}.</p>
 """

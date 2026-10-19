@@ -46,6 +46,7 @@ def main() -> None:
         "named by APPLICATIONINSIGHTS_CONNECTION_STRING",
     )
     p.add_argument("scenarios", nargs="+")
+    p.add_argument("--agent", default="", help="the agent's name on each verdict")
     args = p.parse_args()
 
     checks = {n: c for n, c in load(args.config).items() if c.needs == {"session"}}
@@ -75,7 +76,7 @@ def main() -> None:
                 detail = step.text or json.dumps(step.arguments or step.result, default=str)
                 flag = " [not done]" if step.is_error else ""
                 print(f"    {step.kind:11} {step.name:16} {detail[:150]}{flag}")
-    sink, flush = _sink() if args.emit_to_app_insights else (None, None)
+    sink, flush = _sink(args.agent) if args.emit_to_app_insights else (None, None)
     traces = {}
     for t in turns:
         traces.setdefault(t.session_id or t.run_id, t.trace_id)
@@ -114,7 +115,7 @@ def main() -> None:
         print(f"\nsent {sum(len(found) for _ in checks)} verdicts to App Insights (synthetic)")
 
 
-def _sink():  # type: ignore[no-untyped-def]
+def _sink(agent: str):  # type: ignore[no-untyped-def]
     """Verdicts through OpenTelemetry's logs API to App Insights: what the agent
     would do in production, where the words stay and only verdicts leave."""
     import os
@@ -130,7 +131,7 @@ def _sink():  # type: ignore[no-untyped-def]
     )
     logs = LoggerProvider()
     logs.add_log_record_processor(BatchLogRecordProcessor(exporter))
-    return OtelEvents(logger_provider=logs, synthetic=True), logs.force_flush
+    return OtelEvents(logger_provider=logs, synthetic=True, agent=agent), logs.force_flush
 
 
 def _on_trace(trace_id: str):  # type: ignore[no-untyped-def]

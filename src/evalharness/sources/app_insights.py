@@ -42,6 +42,12 @@ COLUMNS = (
 )
 """Exactly what is read: nothing else leaves the workspace."""
 
+VERDICTS = (
+    "AppTraces | where isnotempty(Properties['gen_ai.evaluation.name'])"
+    " | project TimeGenerated, OperationId, Properties | order by TimeGenerated asc"
+)
+"""The verdict events, and only the columns a report reads."""
+
 
 class AppInsights:
     name = "app_insights"
@@ -67,7 +73,9 @@ class AppInsights:
             + f" | project {', '.join(COLUMNS)} | order by TimeGenerated asc"
         )
 
-    def call(self, start: datetime, end: datetime) -> list[dict[str, Any]]:
+    def call(
+        self, start: datetime, end: datetime, query: str | None = None
+    ) -> list[dict[str, Any]]:
         from azure.monitor.query import LogsQueryClient, LogsQueryStatus
 
         if self._client is None:
@@ -77,7 +85,7 @@ class AppInsights:
                 self._credential = DefaultAzureCredential()
             self._client = LogsQueryClient(self._credential)
         answer = self._client.query_workspace(
-            self.workspace_id, self.query(), timespan=(start, end)
+            self.workspace_id, query or self.query(), timespan=(start, end)
         )
         if answer.status != LogsQueryStatus.SUCCESS:
             raise RuntimeError(
@@ -86,6 +94,23 @@ class AppInsights:
         table = answer.tables[0]
         columns = [getattr(c, "name", c) for c in table.columns]
         return [dict(zip(columns, row, strict=True)) for row in table.rows]
+
+    def verdict_rows(self, start: float, end: float) -> list[dict[str, Any]]:
+        """The verdicts our sink wrote (`gen_ai.evaluation.result` events, kept by
+        App Insights in `AppTraces`), as `{at, trace, attributes}`."""
+        rows = self.call(
+            datetime.fromtimestamp(start, UTC), datetime.fromtimestamp(end, UTC), VERDICTS
+        )
+        return [
+            {
+                "at": _time(r["TimeGenerated"]),
+                "trace": str(r.get("OperationId") or ""),
+                "attributes": json.loads(r["Properties"])
+                if isinstance(r["Properties"], str)
+                else dict(r["Properties"] or {}),
+            }
+            for r in rows
+        ]
 
     def spans(self, start: float | None = None, end: float | None = None) -> Iterator[Span]:
         until = datetime.fromtimestamp(end, UTC) if end is not None else datetime.now(UTC)

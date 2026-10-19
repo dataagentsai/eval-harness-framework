@@ -28,6 +28,9 @@ from typing import Any, Literal
 from evalharness.core import EvalRequest, EvalResult
 
 EVENT = "gen_ai.evaluation.result"
+SCHEMA = "1"
+"""The version of this event's `evalharness.*` fields. It changes whenever a
+field's meaning or format changes, so a reader can tell old events from new."""
 
 
 class OtelEvents:
@@ -39,12 +42,15 @@ class OtelEvents:
         logger_provider: Any = None,
         explain: Literal["counts", "full"] = "counts",
         synthetic: bool = False,
+        agent: str = "",
     ) -> None:
         from opentelemetry._logs import get_logger
 
         self.logger = get_logger("evalharness", logger_provider=logger_provider)
         self.explain = explain
         self.synthetic = synthetic
+        self.agent = agent
+        """Which agent these verdicts are about, for reports over a shared workspace."""
         """Marks verdicts on test conversations, so reports can leave them out."""
 
     def record(
@@ -58,7 +64,12 @@ class OtelEvents:
         self.logger.emit(
             event_name=EVENT,
             attributes=attributes(
-                result, rule=rule, request=request, explain=self.explain, synthetic=self.synthetic
+                result,
+                rule=rule,
+                request=request,
+                explain=self.explain,
+                synthetic=self.synthetic,
+                agent=self.agent,
             ),
             context=context,
         )
@@ -71,12 +82,14 @@ def attributes(
     request: EvalRequest | None = None,
     explain: str = "counts",
     synthetic: bool = False,
+    agent: str = "",
 ) -> dict[str, Any]:
     """The event's attributes: the conventions' names first, ours after."""
     a: dict[str, Any] = {
         "gen_ai.evaluation.name": result.evaluator,
         "gen_ai.evaluation.score.label": label(result),
         "gen_ai.evaluation.explanation": result.reason if explain == "full" else _counts(result),
+        "evalharness.schema": SCHEMA,
         "evalharness.verdict": result.verdict,
         "evalharness.provider": result.provider,
         "evalharness.version": result.version,
@@ -103,6 +116,9 @@ def attributes(
         a["evalharness.session.id"] = request.session.id
     if request is not None and request.meta.trace:
         a["evalharness.trace"] = request.meta.trace
+    agent = agent or (request.meta.agent if request is not None else "")
+    if agent:
+        a["evalharness.agent"] = agent
     if synthetic:
         a["evalharness.synthetic"] = True
     return a

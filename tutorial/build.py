@@ -29,7 +29,7 @@ HOME = '<a class="home" href="https://cleandataengineering.ai/">cleandataenginee
 if PUBLISH:
     OUT = Path(sys.argv[sys.argv.index("--publish") + 1]).expanduser()
 SECTIONS = ["pages_start", "pages_arch", "pages_hooks", "pages_outputs", "pages_session", "pages_patterns",
-            "pages_yaml", "pages_traces", "pages_realrun", "pages_verdicts", "pages_catalog", "pages_requirements", "pages_design",
+            "pages_yaml", "pages_traces", "pages_realrun", "pages_verdicts", "pages_report", "pages_catalog", "pages_requirements", "pages_design",
             "pages_review"]
 
 EXTRA_CSS = r"""
@@ -157,6 +157,10 @@ def main():
     order = list(walk())
     (OUT / "style.css").write_text(kit.CSS + EXTRA_CSS)
     (OUT / "nav.js").write_text(kit.JS)
+    # Generated reports (docs/reports) are shown as they are, beside the pages.
+    (OUT / "reports").mkdir(exist_ok=True)
+    for report in (live.ROOT / "docs" / "reports").glob("*.html"):
+        (OUT / "reports" / report.name).write_text(report.read_text())
     # Render every page once first, so every review box is registered before
     # the Review page (last in the tree) lists them.
     html = {pid: render(pid, order) for pid in order}

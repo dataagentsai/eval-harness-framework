@@ -297,3 +297,21 @@ What the round trip taught:
 Saved questions compile to KQL from their one definition (`questions.to_kql`).
 With one deliberate failing verdict sent, `under_escalations` returned exactly
 that row and the other questions none.
+
+---
+
+# Run 6: the weekly report, from verdicts only (19 Oct 2026)
+
+`scripts/weekly_report.py` reads the verdict events from App Insights and
+writes one self-contained page (`docs/reports/fnol-weekly-2026-10-19.html`):
+per rule pass, fail, nothing to check and could not judge, the fail rate among
+judged conversations, the change from the week before, the saved questions,
+and the requirements broken. No model and no conversation content: counts and
+filters only.
+
+The first build was wrong three ways, all fixed: it mixed two batches written
+in different formats (verdicts now carry `evalharness.schema`; a period can
+start after a format change), it compared a chosen period with an unfair
+"week before" (a chosen period is now compared with nothing), and it said "no
+requirement was broken" while a rule had failed whose rule named none (such
+failures are now counted apart, as a gap in the rules file).

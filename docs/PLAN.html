@@ -232,7 +232,7 @@ svg #ah path{fill:var(--muted)}
     <li><span class="pill me">Claude</span><span>Tap: an OTLP receiver in the eval worker; a Collector config that sends it a copy.</span></li>
     <li><span class="pill me">Claude</span><span>Pull: read from Phoenix or Langfuse on a schedule, with backfill (re-run new rules on old traces).</span></li>
     <li><span class="pill me">Claude</span><span>Skip rules already judged inline; run session rules when a session closes.</span></li>
-    <li><span class="pill me">Claude</span><span>The day-1 report: run the packs over the last 30 days of a team's traces, with no code change on their side.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>The weekly report (<code>evalharness.report</code>, <code>scripts/weekly_report.py</code>): rules with pass, fail, nothing to check and could not judge apart, fail rate among judged, change from the week before, the saved questions, broken requirements; from verdicts only, no model, no content. Built from FNOL's App Insights (test data, marked).</span></li>
     <li><span class="pill me">Claude</span><span>Result format published as semantic conventions (<code>eval.*</code> names), adopting OTel's GenAI evaluation fields where they exist (decision D12).</span></li>
     <li><span class="pill me">Claude</span><span>Tail-style sampling for online checks: errors, blocks, escalations, high cost and new prompt versions first, then a random baseline.</span></li>
     <li><span class="pill me">Claude</span><span>Agent name, version, environment and prompt version on every result.</span></li>
@@ -952,6 +952,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>19 Oct 2026</td><td>v1 step 3 done: the weekly report from App Insights verdicts; verdict events carry a format version (<code>evalharness.schema</code>) and the agent's name. Tutorial page “Weekly report”. Version 1's loop now runs end to end on Azure: read traces, check where the words are, write verdicts back, report. 297 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>v1 step 2 done (T30): verdicts back into App Insights as <code>gen_ai.evaluation.result</code> events from inside the agent's environment, content-free; saved questions compile to KQL and found a deliberate under-escalation on Azure. Tutorial page “Verdicts into App Insights”. 281 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>App Insights source built and run on FNOL's deployed traces (read-only). Lesson: what isn't recorded must never become a verdict; patterns now answer “could not judge” (<code>Session.unrecorded</code>, three-valued conditions). Tutorial page “Real traces: FNOL”. 269 tests; reference-agent 0b2e22a.</td></tr>
 <tr><td>19 Oct 2026</td><td>Tier 3 started: <code>evalharness.hooks</code> for a loop of your own (T29), YAML placement (<code>at</code>, <code>tools</code>, <code>on_fail</code>), any check usable as a hook; tutorial page “Hooks in a loop of your own”. 8 more review questions decided on your recommendation. 236 tests.</td></tr>
