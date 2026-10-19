@@ -69,3 +69,19 @@ def test_every_saved_question_reads_a_real_pattern() -> None:
     from evalharness.patterns import PATTERNS
 
     assert {q.pattern for q in QUESTIONS} <= set(PATTERNS)
+
+
+@pytest.mark.parametrize(
+    ("name", "has", "synthetic"),
+    [
+        ("under_escalations", ["== 'decision_vs_should'", "has 'under'", "!= 'True'"], False),
+        ("over_escalations", ["has 'over'"], True),
+        ("promises_not_kept", ["== 'claim_needs_action'", "has 'claim_not_backed'"], False),
+    ],
+)
+def test_a_saved_question_compiles_to_kql(name: str, has: list[str], synthetic: bool) -> None:
+    from evalharness.questions import to_kql
+
+    kql = to_kql(BY_NAME[name], synthetic=synthetic)
+    assert all(h in kql for h in has)
+    assert ("evalharness.synthetic" in kql) is (not synthetic)

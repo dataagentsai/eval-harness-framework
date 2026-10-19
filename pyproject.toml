@@ -19,6 +19,8 @@ ragas = ["ragas==0.4.3", "langchain-community==0.4.1"]
 presidio = ["presidio-analyzer==2.2.364"]
 # Reading traces from a workspace-based App Insights resource.
 appinsights = ["azure-monitor-query==2.0.0", "azure-identity==1.26.0"]
+# Writing verdicts as OpenTelemetry events, wherever the agent's telemetry goes.
+otel = ["opentelemetry-api>=1.39"]
 
 [dependency-groups]
 dev = ["pytest>=8", "mypy>=1.11", "ruff>=0.6", "types-PyYAML>=6.0"]

@@ -1,0 +1,26 @@
+{
+  "run": "FNOL's 29 scenarios (48 conversations), checked inside FNOL's environment; only verdicts sent to App Insights, marked synthetic. The one fail is a deliberate demo verdict sent to prove the under_escalations query finds it.",
+  "conversations": 48,
+  "verdicts": 241,
+  "by_rule": {
+    "facts_from_systems": {
+      "not_applicable": 31,
+      "pass": 17
+    },
+    "handed_to_person": {
+      "pass": 48
+    },
+    "payout_approval": {
+      "fail": 1,
+      "pass": 48
+    },
+    "payout_needs_claim_lookup": {
+      "not_applicable": 44,
+      "pass": 4
+    },
+    "payout_promise_kept": {
+      "not_applicable": 45,
+      "pass": 3
+    }
+  }
+}

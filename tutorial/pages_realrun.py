@@ -70,7 +70,8 @@ claim read at all” need no words, so those checks still pass or fail.</p>
 {table(["Saved question", "Rows"], [[f"<code>{k}</code>", v] for k, v in run["questions"].items()])}
 {note("What this means for the product", "<p>A production agent with privacy on records <i>what happened</i> (tools, outcomes, endings) but not <i>what was said</i>. Reading its traces afterwards can check structure, not content. Content checks (promises, facts, the customer's words) have to run where the content is: inside the agent's own environment, inline or just after the turn, with only the verdicts sent to App Insights. That's the next step.</p>")}
 {review("trace-real", "Real traces", [
-    "For content checks on a production agent, where should they run? My recommendation: where the content already is, inside the agent's environment, sending only verdicts to App Insights, so no customer words leave. Content capture stays off in production; a dev deployment with synthetic customers may turn it on for demos.",
+    ("For content checks on a production agent, where should they run?",
+     "Inside the agent's environment, where the words already are; only verdicts go to App Insights, so no customer words leave. Content capture stays off in production (T30, 19 Oct). Built: see the next page."),
 ])}
 <p class="deeper">Code: <code>evalharness/sources/app_insights.py</code>, <code>scripts/pull_app_insights.py</code>,
 <code>scripts/checks_on_traces.py</code>. Where checks can run: {link("arch-modes", "offline, inline, online")}. {status(True, "App Insights source")}</p>

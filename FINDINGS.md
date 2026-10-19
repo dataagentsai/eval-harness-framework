@@ -270,3 +270,30 @@ everything needing words or values is an explicit skip.
 **Product consequence.** With privacy on, traces show what happened, not what
 was said. Content checks must run where the content is (inside the agent's
 environment, inline or right after the turn) and send only verdicts out.
+
+---
+
+# Run 5: verdicts back into App Insights, words kept inside (19 Oct 2026)
+
+Decision T30: checks that need the conversation's words run inside the agent's
+environment; only verdicts go to App Insights. `evalharness.sinks.otel_events`
+writes each verdict as an OpenTelemetry `gen_ai.evaluation.result` event
+through the logs API, so it goes wherever the agent's telemetry goes, beside
+the judged turn's trace (`OperationId`).
+
+`scripts/patterns_on_scenarios.py --emit-to-app-insights` ran FNOL's 29
+scenarios in FNOL's environment (content present in process) and sent 240
+verdicts, marked `evalharness.synthetic`, to the dev App Insights. Counted
+back with KQL: `docs/runs/fnol-verdicts-app-insights-2026-10-19.json`.
+
+What the round trip taught:
+
+| Seen | Fix |
+|---|---|
+| App Insights stores an array attribute as Python-looking text (`('AAC-0029',)`) | Lists go as comma-separated text |
+| "Nothing to check" counted as a pass inflates every report (a payout rule on 44 conversations with no payout) | The event's label is `not_applicable`; the framework's own verdict is unchanged |
+| A finding's label can quote what was said or an amount; another provider's reason is model text about the conversation | Content-free explanation by default: our checks' counts and finding kinds; outside providers' verdict and kinds only |
+
+Saved questions compile to KQL from their one definition (`questions.to_kql`).
+With one deliberate failing verdict sent, `under_escalations` returned exactly
+that row and the other questions none.

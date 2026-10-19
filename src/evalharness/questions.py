@@ -96,3 +96,24 @@ def answer(question: Question, results: Iterable[tuple[str, EvalResult]]) -> lis
                     Row(session, result.evaluator, question.finding, str(found.get("label", "")))
                 )
     return rows
+
+
+def to_kql(question: Question, *, days: int = 7, synthetic: bool = False) -> str:
+    """The question as an App Insights (KQL) query over the verdicts our sink
+    writes (`evalharness.sinks.otel_events`): one row per conversation that
+    answers it, newest first. Generated from the same definition `answer` uses,
+    so the dashboard, the alert and the chat ask the same question."""
+    keep = "" if synthetic else "\n| where tostring(p['evalharness.synthetic']) != 'True'"
+    return (
+        "AppTraces\n"
+        f"| where TimeGenerated > ago({days}d)\n"
+        "| extend p = parse_json(Properties)\n"
+        f"| where tostring(p['evalharness.check']) == '{question.pattern}'\n"
+        f"| where split(tostring(p['evalharness.finding_kinds']), ',') has '{question.finding}'"
+        f"{keep}\n"
+        "| project TimeGenerated, OperationId,\n"
+        "    rule = tostring(p['gen_ai.evaluation.name']),\n"
+        "    session = tostring(p['evalharness.session.id']),\n"
+        "    requirements = tostring(p['evalharness.requirements'])\n"
+        "| order by TimeGenerated desc"
+    )
