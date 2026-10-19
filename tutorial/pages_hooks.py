@@ -52,6 +52,33 @@ def _demo():
     return rows
 
 
+moments_yaml = """moments:
+  pre_tool: {budget_ms: 200, on_error: closed}   # before an action: never let a broken check through
+  reply:    {budget_ms: 300, on_error: open}     # the reply: a broken check shouldn't silence the agent
+
+evaluators:
+  refund_cap:
+    adapter: argument_limit
+    tool: issue_refund
+    field: amount
+    max: 10000
+    at: pre_tool
+    mode: shadow                                # the default; move to block when it has earned it"""
+
+
+def _shadow_demo():
+    rows = []
+    for mode in ("shadow", "block"):
+        records = []
+        hooks = Hooks(on_record=records.append)
+        hooks.add("pre_tool", lambda e: Decision("block", "over the cap")
+                  if e.arguments.get("amount", 0) > 10000 else None, name="refund_cap", mode=mode)
+        d = hooks.run(Event("pre_tool", tool="issue_refund", arguments={"amount": 48000}))
+        r = records[0]
+        rows.append([f"<code>{mode}</code>", f"<b>{r.intended}</b>", f"<b>{d.action}</b>"])
+    return rows
+
+
 @page("arch-hooks", "Hooks in a loop of your own", "arch",
       "Five lines in your loop, and a matcher on each hook to target one tool.", short="Hooks in your own loop")
 def arch_hooks():
@@ -151,6 +178,30 @@ the model asked for. Which hooks ran, and what was decided:</p></div>
     ["Matching on the kind of tool, not its name", "Our specs: every operation declares its side effect", "New irreversible tools are covered without a new rule"],
 ])}
 {note("Why this stays simple and effective", "<p><b>Simple:</b> one entry point, five calls, one decision type; rules are added in YAML or with a decorator, never in the loop. <b>Effective:</b> unmatched hooks cost nothing; the first block stops the rest; matching by kind of tool covers tools nobody listed; and the same hook runs in your loop, in a framework (an adapter turns its hook into an Event), or at the gateway. Still to come in Tier 3: a time budget per moment, fail-closed when a hook breaks, and every decision recorded on the trace.</p>")}
+<h2>Safe by default: modes, broken checks, time budgets</h2>
+<div class="text"><p>A check that can stop a reply can also stop a good one. So a rule placed in
+YAML starts in <b>shadow</b>: it runs on every turn and records what it <i>would</i> have
+done, and changes nothing until someone moves it to <b>block</b>.</p></div>
+{table(["Mode", "Runs?", "Acts?", "Use it for"], [
+    ["<code>off</code>", "no", "no", "a rule kept in the file but switched off"],
+    ["<code>shadow</code>", "yes, and recorded", "no", "every new rule: measure how often it would be right (the default from YAML)"],
+    ["<code>alert</code>", "yes, and recorded", "no, but flagged for an alert", "a rule you trust to notice, not yet to stop"],
+    ["<code>block</code>", "yes, and recorded", "yes", "a rule with its precision measured and an owner"],
+])}
+{yaml_block(moments_yaml, "Each moment's budget and what happens when a check breaks")}
+{table(["What can go wrong", "What happens"], [
+    ["A check is declared slower than its moment allows (Azure groundedness, about 3 s, at <code>pre_tool</code> with 200 ms)", "Refused when the rules load: “run it online instead”"],
+    ["A check runs over the budget once", "It still decides, and the record says <i>over budget</i>"],
+    ["A blocking check breaks (an exception)", "<code>on_error: closed</code> blocks the action (the default); <code>open</code> lets the turn go on. Either way it's recorded"],
+    ["A shadow check breaks", "Nothing changes for the customer; the break is recorded"],
+])}
+<h3>Try it: one rule in shadow, then in block</h3>
+{table(["Mode", "What the rule decided", "What was applied"], _shadow_demo())}
+<div class="text"><p>Every run of every hook becomes an event on the turn's trace
+(<code>evalharness.guard.decision</code>): rule, moment, mode, decided, applied, milliseconds,
+tool, over budget, broke. No reason text, which could quote the conversation. Counting
+“decided block, applied allow” for a shadow rule over a week is how you measure it
+before promoting it.</p></div>
 {code("src/evalharness/hooks.py", r"    def run\(self, event", r"^def check", "The hook runner, in real code")}
 {review("arch-hooks", "Hooks in your own loop", [
     ("Is “the loop reports the moment, the hook says what it's for” simple enough to explain to an agent team?",

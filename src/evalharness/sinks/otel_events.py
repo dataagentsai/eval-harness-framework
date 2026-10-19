@@ -152,3 +152,37 @@ def _counts(result: EvalResult) -> str:
         head = result.verdict
     kinds = sorted({f.kind for f in result.findings})
     return head + (f"; {', '.join(kinds)}" if kinds else "")
+
+
+DECISION = "evalharness.guard.decision"
+
+
+def decision_recorder(*, logger_provider: Any = None, agent: str = "") -> Any:
+    """A `Hooks(on_record=...)` callback that puts every inline decision on the
+    current trace as an event: which rule, at which moment, in which mode, what
+    it decided and what was applied, how long it took. No reason text."""
+    from opentelemetry._logs import get_logger
+
+    logger = get_logger("evalharness", logger_provider=logger_provider)
+
+    def record(r: Any) -> None:
+        a: dict[str, Any] = {
+            "evalharness.schema": SCHEMA,
+            "evalharness.moment": r.position,
+            "evalharness.rule": r.hook,
+            "evalharness.mode": r.mode,
+            "evalharness.intended": r.intended,
+            "evalharness.applied": r.applied,
+            "evalharness.ms": round(r.ms, 3),
+        }
+        if r.tool:
+            a["evalharness.tool"] = r.tool
+        if r.over_budget:
+            a["evalharness.over_budget"] = True
+        if r.broke:
+            a["evalharness.broke"] = True
+        if agent:
+            a["evalharness.agent"] = agent
+        logger.emit(event_name=DECISION, attributes=a)
+
+    return record

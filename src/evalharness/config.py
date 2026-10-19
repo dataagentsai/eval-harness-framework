@@ -31,7 +31,7 @@ import yaml
 from evalharness.adapter import Adapter
 from evalharness.adapters import ADAPTERS
 from evalharness.core import Scale
-from evalharness.hooks import POSITIONS, Hooks
+from evalharness.hooks import MODES, POSITIONS, Hooks, Moment
 from evalharness.hooks import check as as_hook
 from evalharness.judge_model import JudgeModel
 from evalharness.patterns import PATTERNS
@@ -41,7 +41,7 @@ KINDS = {**ADAPTERS, **PATTERNS}
 PRESETS = Path(__file__).parent / "presets"
 
 SCALE_FIELDS = frozenset({"raw_min", "raw_max", "higher_is_better", "threshold"})
-PLACEMENT = ("at", "tools", "side_effects", "on_fail")
+PLACEMENT = ("at", "tools", "side_effects", "on_fail", "mode")
 """Where a rule runs inline: the moment, which tools, and what a fail does."""
 
 
@@ -68,7 +68,7 @@ def load(path: str | Path) -> dict[str, Adapter]:
 def build(config: Mapping[str, Any]) -> dict[str, Adapter]:
     """Every configured evaluator, built, by its configured name."""
     config = with_preset(config)
-    _only(config, frozenset({"judge", "evaluators", "spec"}), "the file")
+    _only(config, frozenset({"judge", "evaluators", "spec", "moments"}), "the file")
     judge = _judge(config.get("judge"))
     built: dict[str, Adapter] = {}
     for name, spec in (config.get("evaluators") or {}).items():
@@ -86,9 +86,16 @@ def build(config: Mapping[str, Any]) -> dict[str, Adapter]:
     return built
 
 
-def load_hooks(path: str | Path) -> Hooks:
-    """The rules a file places inline (`at:`), as hooks for a loop of your own."""
-    hooks = Hooks()
+def load_hooks(path: str | Path, *, on_record: Any = None) -> Hooks:
+    """The rules a file places inline (`at:`), as hooks for a loop of your own.
+    A rule placed in YAML starts in `shadow` unless the file says otherwise: it
+    runs and is recorded, and acts only once someone moves it to `block`.
+
+        moments:
+          pre_tool: {budget_ms: 200, on_error: closed}
+    """
+    raw = yaml.safe_load(Path(path).read_text()) or {}
+    hooks = Hooks(moments=_moments(raw.get("moments") or {}), on_record=on_record)
     for name, check_ in load(path).items():
         where = check_.placement
         if where:
@@ -98,8 +105,22 @@ def load_hooks(path: str | Path) -> Hooks:
                 tools=where.get("tools", ()),
                 side_effects=where.get("side_effects", ()),
                 name=name,
+                mode=where.get("mode", "shadow"),
+                expected_ms=check_.expected_ms,
             )
     return hooks
+
+
+def _moments(spec: Mapping[str, Any]) -> dict[str, Moment]:
+    out: dict[str, Moment] = {}
+    for position, settings in spec.items():
+        if position not in POSITIONS:
+            raise ConfigRefused(f"moments.{position}: not a moment; known: {', '.join(POSITIONS)}")
+        _only(settings, frozenset({"budget_ms", "on_error"}), f"moments.{position}")
+        if settings.get("on_error", "closed") not in ("closed", "open"):
+            raise ConfigRefused(f"moments.{position}.on_error must be closed or open")
+        out[position] = Moment(**settings)
+    return out
 
 
 def _placement(spec: Mapping[str, Any], name: str) -> dict[str, Any]:
@@ -109,6 +130,8 @@ def _placement(spec: Mapping[str, Any], name: str) -> dict[str, Any]:
         raise ConfigRefused(f"{name}.at must be one of {', '.join(POSITIONS)}")
     if spec.get("on_fail", "block") not in ("block", "escalate", "allow"):
         raise ConfigRefused(f"{name}.on_fail must be block, escalate or allow")
+    if spec.get("mode", "shadow") not in MODES:
+        raise ConfigRefused(f"{name}.mode must be one of {', '.join(MODES)}")
     if spec.get("tools") and spec["at"] not in ("pre_tool", "post_tool"):
         raise ConfigRefused(f"{name}.tools is for pre_tool and post_tool only")
     return {k: tuple(v) if isinstance(v, list) else v for k, v in spec.items()}

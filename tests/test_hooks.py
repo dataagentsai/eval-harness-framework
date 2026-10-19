@@ -161,33 +161,36 @@ def test_a_session_check_stops_a_call_before_it_happens(
         )
 
 
-def test_a_rule_placed_in_yaml_becomes_a_hook(tmp_path: Any) -> None:
+@pytest.mark.parametrize(
+    ("mode_line", "mode", "applied"),
+    [("", "shadow", "allow"), ("    mode: block\n", "block", "block")],
+)
+def test_a_rule_placed_in_yaml_starts_in_shadow(
+    tmp_path: Any, mode_line: str, mode: str, applied: str
+) -> None:
     path = tmp_path / "rules.yaml"
     path.write_text(
-        """
-evaluators:
-  refund_needs_lookup:
-    adapter: requires_before
-    action: issue_refund
-    before: get_order
-    at: pre_tool
-    tools: [issue_refund]
-    on_fail: block
-  promise_kept:
-    adapter: claim_needs_action
-    claims: {refunded: {phrases: ["has been refunded"], tool: issue_refund}}
-"""
+        "moments:\n  pre_tool: {budget_ms: 200, on_error: closed}\n"
+        "evaluators:\n"
+        "  refund_needs_lookup:\n"
+        "    adapter: requires_before\n    action: issue_refund\n    before: get_order\n"
+        "    at: pre_tool\n    tools: [issue_refund]\n"
+        + mode_line
+        + "  promise_kept:\n    adapter: claim_needs_action\n"
+        "    claims: {refunded: {phrases: [refunded], tool: issue_refund}}\n"
     )
     from evalharness.config import load_hooks
 
-    hooks = load_hooks(path)
-    assert [(p.name, p.position, p.match.tools) for p in hooks.placed] == [
-        ("refund_needs_lookup", "pre_tool", ("issue_refund",))
+    records: list[Any] = []
+    hooks = load_hooks(path, on_record=records.append)
+    assert [(p.name, p.position, p.mode) for p in hooks.placed] == [
+        ("refund_needs_lookup", "pre_tool", mode)
     ]
-    event = Event(
-        "pre_tool", tool="issue_refund", session=Session("s", (Step("user", text="refund"),))
-    )
-    assert hooks.run(event).action == "block"
+    assert hooks.moment("pre_tool").budget_ms == 200
+    event = Event("pre_tool", tool="issue_refund", session=Session("s", (Step("user", text="r"),)))
+    assert hooks.run(event).action == applied
+    (r,) = records
+    assert (r.intended, r.applied, r.mode) == ("block", applied, mode)
 
 
 @pytest.mark.parametrize(
@@ -196,6 +199,7 @@ evaluators:
         ("at: lunch", "at must be one of"),
         ("at: pre_tool\n    on_fail: shrug", "on_fail must be"),
         ("at: reply\n    tools: [issue_refund]", "tools is for pre_tool"),
+        ("at: pre_tool\n    mode: loud", "mode must be one of"),
     ],
 )
 def test_a_wrong_yaml_placement_is_refused(tmp_path: Any, placement: str, error: str) -> None:
@@ -208,3 +212,118 @@ def test_a_wrong_yaml_placement_is_refused(tmp_path: Any, placement: str, error:
     )
     with pytest.raises(ConfigRefused, match=error):
         load(path)
+
+
+# ------------------------------------------------------------- modes, errors, budgets
+def _block(event: Event) -> Decision:
+    return Decision("block", "no")
+
+
+def _boom(event: Event) -> Decision:
+    raise RuntimeError("the check broke")
+
+
+@pytest.mark.parametrize(
+    ("mode", "applied", "recorded"),
+    [
+        ("block", "block", ("block", "block")),
+        ("alert", "allow", ("block", "allow")),
+        ("shadow", "allow", ("block", "allow")),
+        ("off", "allow", None),  # never runs, never recorded
+    ],
+)
+def test_a_mode_decides_whether_a_decision_acts(
+    mode: Any, applied: str, recorded: tuple[str, str] | None
+) -> None:
+    records: list[Any] = []
+    hooks = Hooks(on_record=records.append)
+    hooks.add("pre_tool", _block, mode=mode)
+    assert hooks.run(Event("pre_tool", tool="t")).action == applied
+    assert [(r.intended, r.applied) for r in records] == ([recorded] if recorded else [])
+
+
+@pytest.mark.parametrize(
+    ("on_error", "mode", "applied"),
+    [("closed", "block", "block"), ("open", "block", "allow"), ("closed", "shadow", "allow")],
+)
+def test_a_broken_hook_fails_the_way_its_moment_says(
+    on_error: Any, mode: Any, applied: str
+) -> None:
+    from evalharness.hooks import Moment
+
+    records: list[Any] = []
+    hooks = Hooks(moments={"pre_tool": Moment(on_error=on_error)}, on_record=records.append)
+    hooks.add("pre_tool", _boom, mode=mode)
+    decision = hooks.run(Event("pre_tool", tool="t"))
+    assert decision.action == applied
+    assert records[0].broke and records[0].intended == (
+        "block" if on_error == "closed" else "allow"
+    )
+    if applied == "block":
+        assert decision.reason == "hook broke: RuntimeError"
+
+
+def test_a_check_too_slow_for_a_moment_is_refused_when_added() -> None:
+    from evalharness.hooks import Moment
+
+    hooks = Hooks(moments={"pre_tool": Moment(budget_ms=200)})
+    with pytest.raises(ValueError, match="allows 200 ms. Run it online instead"):
+        hooks.add("pre_tool", _block, name="groundedness", expected_ms=3000)
+    hooks.add("pre_tool", _block, name="cap", expected_ms=5)  # fits
+
+
+def test_a_run_over_budget_is_recorded() -> None:
+    import time
+
+    from evalharness.hooks import Moment
+
+    def slow(event: Event) -> None:
+        time.sleep(0.02)
+
+    records: list[Any] = []
+    hooks = Hooks(moments={"reply": Moment(budget_ms=1)}, on_record=records.append)
+    hooks.add("reply", slow)
+    hooks.run(Event("reply", text="hi"))
+    assert records[0].over_budget and records[0].ms >= 1
+
+
+def test_every_decision_goes_on_the_trace_without_its_reason() -> None:
+    pytest.importorskip("opentelemetry.sdk")
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter, SimpleLogRecordProcessor
+
+    from evalharness.sinks.otel_events import DECISION, decision_recorder
+
+    exporter = InMemoryLogRecordExporter()
+    logs = LoggerProvider()
+    logs.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    hooks = Hooks(on_record=decision_recorder(logger_provider=logs, agent="shop"))
+    hooks.add(
+        "pre_tool",
+        lambda e: Decision("block", "refund of ₹48,000 is over the cap"),
+        name="refund_cap",
+        mode="shadow",
+    )
+    hooks.run(Event("pre_tool", tool="issue_refund"))
+    (emitted,) = exporter.get_finished_logs()
+    a = dict(emitted.log_record.attributes or {})
+    assert emitted.log_record.event_name == DECISION
+    assert {
+        k: a[k]
+        for k in (
+            "evalharness.rule",
+            "evalharness.mode",
+            "evalharness.intended",
+            "evalharness.applied",
+            "evalharness.tool",
+            "evalharness.agent",
+        )
+    } == {
+        "evalharness.rule": "refund_cap",
+        "evalharness.mode": "shadow",
+        "evalharness.intended": "block",
+        "evalharness.applied": "allow",
+        "evalharness.tool": "issue_refund",
+        "evalharness.agent": "shop",
+    }
+    assert "₹" not in str(a)

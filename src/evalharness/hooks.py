@@ -31,6 +31,7 @@ modifications chain. Any of our checks becomes a hook with `check(...)`.
 from __future__ import annotations
 
 import fnmatch
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, Literal
@@ -38,6 +39,13 @@ from typing import Any, Literal
 from evalharness.core import EvalRequest, Evaluator, Response, Session, Step, judge
 
 Position = Literal["pre_model", "post_model", "pre_tool", "post_tool", "reply"]
+Mode = Literal["off", "shadow", "alert", "block"]
+"""What a hook's decision is allowed to do. `shadow` runs and records what it
+would have decided, and changes nothing; `alert` the same, flagged for an
+alert; `block` acts; `off` doesn't run. A rule moves up from shadow only with
+its precision measured and an owner (T29's companion rule)."""
+MODES: tuple[Mode, ...] = ("off", "shadow", "alert", "block")
+OnError = Literal["closed", "open"]
 POSITIONS: tuple[Position, ...] = ("pre_model", "post_model", "pre_tool", "post_tool", "reply")
 Action = Literal["allow", "modify", "block", "escalate"]
 
@@ -77,6 +85,38 @@ class Decision:
 
 
 ALLOW = Decision()
+
+
+@dataclass(frozen=True)
+class Moment:
+    """The settings of one moment."""
+
+    budget_ms: float | None = None
+    """How long one hook may take here. A hook declared slower is refused when
+    it is added; one that runs slower is recorded as over budget."""
+    on_error: OnError = "closed"
+    """When a blocking hook breaks: `closed` blocks (the safe default inline),
+    `open` lets the turn go on."""
+
+
+@dataclass(frozen=True)
+class Record:
+    """What one hook did at one moment: what the trace gets. No reason text,
+    which can quote the conversation; the hook's name says which rule."""
+
+    position: Position
+    hook: str
+    mode: Mode
+    intended: Action
+    """What the hook decided."""
+    applied: Action
+    """What was done: `allow` for a shadow or alert hook, whatever it decided."""
+    ms: float
+    tool: str = ""
+    over_budget: bool = False
+    broke: bool = False
+
+
 Hook = Callable[[Event], Decision | None]
 """A hook: `None` means allow."""
 
@@ -101,13 +141,23 @@ class Placed:
     position: Position
     match: Match
     hook: Hook
+    mode: Mode = "block"
+    expected_ms: float = 0.0
 
 
 class Hooks:
     """The hooks of one agent, by moment. The loop calls `run`; nothing else."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        moments: Mapping[str, Moment] | None = None,
+        on_record: Callable[[Record], None] | None = None,
+    ) -> None:
         self.placed: list[Placed] = []
+        self.moments: dict[str, Moment] = dict(moments or {})
+        self.on_record = on_record
+        """Called with every hook's `Record`: the place to put decisions on the trace."""
 
     def add(
         self,
@@ -117,16 +167,33 @@ class Hooks:
         tools: Sequence[str] = (),
         side_effects: Sequence[str] = (),
         name: str = "",
+        mode: Mode = "block",
+        expected_ms: float = 0.0,
     ) -> Hook:
         if position not in POSITIONS:
             raise ValueError(f"unknown moment {position!r}; known: {', '.join(POSITIONS)}")
+        if mode not in MODES:
+            raise ValueError(f"unknown mode {mode!r}; known: {', '.join(MODES)}")
+        budget = self.moment(position).budget_ms
+        if budget is not None and expected_ms > budget:
+            raise ValueError(
+                f"{name or getattr(hook, '__name__', 'hook')} takes about {expected_ms:g} ms; "
+                f"{position} allows {budget:g} ms. Run it online instead."
+            )
         if tools and position not in ("pre_tool", "post_tool"):
             raise ValueError(
                 f"{position} has no tool to match; `tools` is for pre_tool and post_tool"
             )
         label = name or getattr(hook, "__name__", "hook")
-        self.placed.append(Placed(label, position, Match(tuple(tools), tuple(side_effects)), hook))
+        self.placed.append(
+            Placed(
+                label, position, Match(tuple(tools), tuple(side_effects)), hook, mode, expected_ms
+            )
+        )
         return hook
+
+    def moment(self, position: str) -> Moment:
+        return self.moments.get(position, Moment())
 
     def _at(
         self, position: Position, tools: tuple[str, ...], side_effect: str | Sequence[str]
@@ -156,13 +223,43 @@ class Hooks:
 
     def run(self, event: Event) -> Decision:
         """Every hook for this moment whose matcher fits, in order. The first
-        block or escalate wins; a modification is handed on to the next hook."""
+        block or escalate wins; a modification is handed on to the next hook.
+        Shadow and alert hooks run and are recorded but change nothing; a
+        blocking hook that breaks decides by the moment's `on_error`."""
         changed: Decision | None = None
+        moment = self.moment(event.position)
         for placed in self.placed:
+            if placed.mode == "off":
+                continue
             if placed.position != event.position or not placed.match.matches(event):
                 continue
-            decision = placed.hook(event) or ALLOW
+            started = time.perf_counter()
+            broke = False
+            try:
+                decision = placed.hook(event) or ALLOW
+            except Exception as failure:  # noqa: BLE001 (a hook must never break the turn)
+                broke = True
+                fallback: Action = "block" if moment.on_error == "closed" else "allow"
+                decision = Decision(fallback, reason=f"hook broke: {type(failure).__name__}")
+            ms = (time.perf_counter() - started) * 1000
             decision = replace(decision, hook=decision.hook or placed.name)
+            acts = placed.mode == "block"
+            if self.on_record is not None:
+                self.on_record(
+                    Record(
+                        position=event.position,
+                        hook=placed.name,
+                        mode=placed.mode,
+                        intended=decision.action,
+                        applied=decision.action if acts else "allow",
+                        ms=ms,
+                        tool=event.tool,
+                        over_budget=moment.budget_ms is not None and ms > moment.budget_ms,
+                        broke=broke,
+                    )
+                )
+            if not acts:
+                continue
             if decision.stops:
                 return decision
             if decision.action == "modify":
