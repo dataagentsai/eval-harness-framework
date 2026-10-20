@@ -207,14 +207,14 @@ svg #ah path{fill:var(--muted)}
   <ul class="tasks">
     <li class="ok"><span class="pill done">Done</span><span>Run any check at any of the five moments: <code>evalharness.hooks</code> (T29), with matchers per tool, per pattern or per kind of tool, placed in code or YAML; <code>check(...)</code> turns any check into a hook.</span></li>
     <li class="ok"><span class="pill done">Done</span><span>A time budget per moment (a check declared too slow is refused at load; a slow run is recorded), fail-closed or fail-open when a hook breaks, and every hook run recorded on the trace as an <code>evalharness.guard.decision</code> event, content-free.</span></li>
-    <li><span class="pill me">Claude</span><span><code>Policy</code> port: results become one action (allow, redact, block, escalate, alert, fail the release).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span><code>Policy</code> port: <code>OnFail</code> (the rule's action) and <code>Redact</code> (mask located findings and let the text through). A check answering <code>error</code> now counts as broken, so fail-closed applies (it silently allowed before). “Fail the release” comes with the CI step (Tier 7).</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Fail-open or fail-closed set per moment in YAML (<code>moments:</code>), closed by default.</span></li>
-    <li class="ok"><span class="pill done">Done</span><span>Rule modes off, shadow, alert, block; a rule placed in YAML starts in shadow. Still to do: the measured-precision and owner gate before a rule moves to block.</span></li>
-    <li><span class="pill me">Claude</span><span>Three config layers (preset, org policy, agent YAML); <code>locked</code> rules the agent team can't switch off; every switch audited; runtime switch without redeploy.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Rule modes off, shadow, alert, block; a rule placed in YAML starts in shadow. A rule may block only with an owner and declared evidence (precision ≥ 0.9 on ≥ 50 conversations), unless the organisation locked it. Measuring the evidence for you comes with the review queue (Tier 8).</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Three layers (preset, organisation policy, agent file); <code>locked</code> rules the agent team can't remove, switch off or change; every change to an inherited rule listed for audit (<code>config.changes</code>). Still to do: switching a rule at runtime without a redeploy.</span></li>
     <li><span class="pill me">Claude</span><span>Every block carries rule id, version, reason and triggering text; a “why” command replays one trace.</span></li>
-    <li><span class="pill me">Claude</span><span><code>StateStore</code> port for running totals (budgets, rate counts, repeat calls). In-memory for tests, Redis for production.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span><code>StateStore</code> port with an in-memory store and <code>limit_total</code> (per-customer totals in a window, counted only for successful calls); <code>Event.user</code>. Redis for several workers still to do.</span></li>
     <li><span class="pill me">Claude</span><span>Inline results written onto the trace with rule id and version, so online doesn't judge them twice.</span></li>
-    <li><span class="pill me">Claude</span><span>Redaction applies the positions from Presidio's findings.</span></li>
+    <li class="ok"><span class="pill done">Done</span><span>Redaction from Presidio's positions, run live: overlapping hits merged into one region (a real Presidio answer had “URLs” inside an email, which leaked part of it).</span></li>
     <li class="ok"><span class="pill done">Done</span><span>Decision: no streaming checks for now (T19).</span></li>
   </ul>
 </div>
@@ -952,6 +952,7 @@ alert_sinks:  [azure_monitor_alerts, teams]
 
 <h2 id="log">Change log</h2>
 <div class="tbl"><table>
+<tr><td>20 Oct 2026</td><td>Tier 3: governance (three layers, locked rules, audit list, the promotion gate), the decide step (<code>Policy</code>: OnFail, Redact with real Presidio), error verdicts fail closed, per-customer running totals (<code>StateStore</code>). Tutorial pages “Who may change a rule” and “Decide and count”. 385 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td>Tier 3: rule modes (YAML rules start in shadow), per-moment budgets and on-error policy, every inline decision recorded on the trace. 352 tests.</td></tr>
 <tr><td>19 Oct 2026</td><td><b>Version 1 complete.</b> Phoenix source and OpenInference translation added; with App Insights, the OTLP file, the five patterns, fact types, the 6 cost rules, Presidio and a judged check, verdicts back into App Insights and the weekly report, the v1 slice is built. 340 tests. Next: Tier 3.</td></tr>
 <tr><td>19 Oct 2026</td><td>Fact types for consistency (T26) and the 6 built cost rules through llm-cost-explainer as a library (Tier 5 started). Tutorial page “Cost rules”. 326 tests.</td></tr>

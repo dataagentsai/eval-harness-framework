@@ -34,9 +34,9 @@ import fnmatch
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Any, Literal
+from typing import Any, Literal, Protocol, runtime_checkable
 
-from evalharness.core import EvalRequest, Evaluator, Response, Session, Step, judge
+from evalharness.core import EvalRequest, EvalResult, Evaluator, Response, Session, Step, judge
 
 Position = Literal["pre_model", "post_model", "pre_tool", "post_tool", "reply"]
 Mode = Literal["off", "shadow", "alert", "block"]
@@ -66,6 +66,9 @@ class Event:
     """The tool's kind, from your tool registry or spec: `read`, `write`, `irreversible`."""
     session: Session | None = None
     """The conversation so far, for checks that read more than this moment."""
+    user: str = ""
+    """Whose conversation it is (the customer's id): what per-customer limits key on.
+    Never sent to a vendor check."""
 
 
 @dataclass(frozen=True)
@@ -274,21 +277,89 @@ class Hooks:
         return changed or ALLOW
 
 
-def check(evaluator: Evaluator, *, on_fail: Action = "block") -> Hook:
+class CheckBroke(RuntimeError):
+    """A check answered `error`: it tried and broke. Raised so the moment's
+    `on_error` decides, as for any hook that breaks."""
+
+
+@runtime_checkable
+class Policy(Protocol):
+    """The decide step: one check's result becomes one decision. Kept apart from
+    the check, so the same check can block in one company and redact in another."""
+
+    def decide(self, result: EvalResult, event: Event, on_fail: Action) -> Decision | None: ...
+
+
+class OnFail:
+    """A fail does what the rule says (`on_fail`); anything else allows."""
+
+    def decide(self, result: EvalResult, event: Event, on_fail: Action) -> Decision | None:
+        if result.verdict == "fail":
+            return Decision(on_fail, reason=result.reason, hook=result.evaluator)
+        return None
+
+
+class Redact:
+    """For text the check located (Presidio gives each finding's start and end):
+    mask those parts and let the text through, instead of blocking it. A failing
+    result with nothing located falls back to `on_fail`."""
+
+    def __init__(self, mask: str = "[{kind}]") -> None:
+        self.mask = mask
+
+    def decide(self, result: EvalResult, event: Event, on_fail: Action) -> Decision | None:
+        if result.verdict != "fail":
+            return None
+        spans = merged(
+            (f.start, f.end, f.kind)
+            for f in result.findings
+            if f.start is not None and f.end is not None
+        )
+        if not spans or not event.text:
+            return OnFail().decide(result, event, on_fail)
+        text, cut, last = event.text, [], 0
+        for start, end, kind in spans:
+            cut.append(text[last:start] + self.mask.format(kind=kind))
+            last = end
+        cut.append(text[last:])
+        return Decision(
+            "modify", reason=f"{len(spans)} masked", hook=result.evaluator, text="".join(cut)
+        )
+
+
+def merged(spans: Any) -> list[tuple[int, int, str]]:
+    """Overlapping hits as one region each, named by its widest hit: Presidio
+    finds "URLs" inside an email address, and masking only the first hit would
+    leave the rest of the address showing."""
+    out: list[tuple[int, int, str, int]] = []
+    for start, end, kind in sorted(spans):
+        if out and start < out[-1][1]:
+            s0, e0, k0, w0 = out[-1]
+            width = end - start
+            out[-1] = (s0, max(e0, end), kind if width > w0 else k0, max(w0, width))
+        else:
+            out.append((start, end, kind, end - start))
+    return [(s0, e0, k0) for s0, e0, k0, _ in out]
+
+
+def check(evaluator: Evaluator, *, on_fail: Action = "block", policy: Policy | None = None) -> Hook:
     """Any of our checks as a hook. At `pre_tool` the call about to be made is
     added to the session first, so a session pattern judges it before it happens:
-    `requires_before` can stop a refund that has no lookup."""
+    `requires_before` can stop a refund that has no lookup. A check that answers
+    `error` counts as broken, so the moment's `on_error` decides (closed by
+    default); it never lets the action through unnoticed."""
+    decide = policy or OnFail()
 
     def hook(event: Event) -> Decision | None:
         steps = tuple(event.session.steps) if event.session else ()
         if event.position == "pre_tool":
             steps += (Step("tool_call", name=event.tool, arguments=dict(event.arguments)),)
         session = Session(event.session.id if event.session else "", steps)
-        response = Response(text=event.text) if event.position in ("post_model", "reply") else None
+        response = Response(text=event.text) if event.text else None
         result = judge(evaluator, EvalRequest(session=session, response=response))
-        if result.verdict == "fail":
-            return Decision(on_fail, reason=result.reason, hook=evaluator.name)
-        return None
+        if result.verdict == "error":
+            raise CheckBroke(f"{evaluator.name}: {result.reason}")
+        return decide.decide(result, event, on_fail)
 
     hook.__name__ = evaluator.name
     return hook

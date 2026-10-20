@@ -28,7 +28,7 @@ PUBLISH = "--publish" in sys.argv
 HOME = '<a class="home" href="https://cleandataengineering.ai/">cleandataengineering.ai</a>'
 if PUBLISH:
     OUT = Path(sys.argv[sys.argv.index("--publish") + 1]).expanduser()
-SECTIONS = ["pages_start", "pages_arch", "pages_hooks", "pages_costs", "pages_outputs", "pages_session", "pages_patterns",
+SECTIONS = ["pages_start", "pages_arch", "pages_hooks", "pages_governance", "pages_costs", "pages_outputs", "pages_session", "pages_patterns",
             "pages_yaml", "pages_traces", "pages_realrun", "pages_verdicts", "pages_report", "pages_catalog", "pages_requirements", "pages_design",
             "pages_review"]
 

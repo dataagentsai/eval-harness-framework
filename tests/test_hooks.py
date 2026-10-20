@@ -163,7 +163,15 @@ def test_a_session_check_stops_a_call_before_it_happens(
 
 @pytest.mark.parametrize(
     ("mode_line", "mode", "applied"),
-    [("", "shadow", "allow"), ("    mode: block\n", "block", "block")],
+    [
+        ("", "shadow", "allow"),
+        (
+            "    mode: block\n    owner: claims-ops\n"
+            "    evidence: {precision: 0.97, sample: 120, measured: 2026-10-19}\n",
+            "block",
+            "block",
+        ),
+    ],
 )
 def test_a_rule_placed_in_yaml_starts_in_shadow(
     tmp_path: Any, mode_line: str, mode: str, applied: str
